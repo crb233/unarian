@@ -1,0 +1,19 @@
+# Outputs 0.
+0 { - 0 | }
+
+# Fails unless input is equal to 0.
+if=0 { { - 0 | + } - }
+
+# Fails unless input is greater than 1.
+if>1 { - - + + }
+
+# Divides by 2 if divisible by 2. Fails otherwise.
+if/2 { - - if/2 + | if=0 }
+
+# Multiplies by 3.
+*3 { - *3 + + + | }
+
+# Outputs the number of collatz steps required to reach 1.
+collatz { if>1 { if/2 | *3 + } collatz + | - }
+
+main { collatz }

@@ -1,0 +1,101 @@
+#========#
+# Basics #
+#========#
+
+# Return 0
+0 { - 0 | }
+
+# Conditionals
+if=0 {   { - 0 | + } -   }
+if=1 { - { - 0 | + } - + }
+if>0 {   - +   }
+if>1 { - - + + }
+
+#==========#
+# Addition #
+#==========#
+
++2  { + + }
++3  { + + + }
++5  { + + + + + }
++7  { + + + + + + + }
++11 { + + + + + + + + + + + }
++13 { + + + + + + + + + + + + + }
+
+#=============#
+# Subtraction #
+#=============#
+
+-2  { - - }
+-3  { - - - }
+-5  { - - - - - }
+-7  { - - - - - - - }
+-11 { - - - - - - - - - - - }
+-13 { - - - - - - - - - - - - - }
+
+#================#
+# Multiplication #
+#================#
+
+*2  { - *2  +2  | }
+*3  { - *3  +3  | }
+*5  { - *5  +5  | }
+*7  { - *7  +7  | }
+*11 { - *11 +11 | }
+*13 { - *13 +13 | }
+
+#================#
+# Exact division #
+#================#
+
+if/2  { -2  if/2  + | if=0 }
+if/3  { -3  if/3  + | if=0 }
+if/5  { -5  if/5  + | if=0 }
+if/7  { -7  if/7  + | if=0 }
+if/11 { -11 if/11 + | if=0 }
+if/13 { -13 if/13 + | if=0 }
+
+#===================#
+# Base 10 Functions #
+#===================#
+
++10 { + + + + + + + + + + }
+-10 { - - - - - - - - - - }
+
+*10 { - *10 +10 | }
+if/10 { -10 if/10 + | if=0 }
+
+exp10 { - exp10 *10 | + }
+iflog10 { if>1 if/10 iflog10 + | if=1 }
+
+
+
+
+#=================#
+# Fractran Primes #
+#=================#
+
+# Runs the following Fractran algorithm for generating primes (taken from the
+# Fractran page on Esolang https://esolangs.org/wiki/Fractran):
+#     3/11 847/45 143/6 7/3 10/91 3/7 36/325 1/2 36/5
+# If running in debug mode, it will print out every prime it encounters.
+
+print_power_of_10 { iflog10 ! 0 - | }
+
+fractran_primes' {
+    print_power_of_10 {
+          if/11           *3
+        | if/3 if/3 if/5  *7 *11 *11
+        | if/2 if/3       *11 *13
+        | if/3            *7
+        | if/7 if/13      *2 *5
+        | if/7            *3
+        | if/5 if/5 if/13 *2 *2 *3 *3
+        | if/2
+        | if/5            *2 *2 *3 *3
+    } fractran_primes'
+}
+
+fractran_primes { 0 +10 fractran_primes' }
+
+main { fractran_primes }
