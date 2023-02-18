@@ -2,38 +2,50 @@
 
 Unarian is an esoteric programming language based on the concept that every program computes a unary function on the natural numbers. Running a program consists of evaluating such a function on some natural number input. Programs can explicitly fail or get stuck in infinite loops, so it's more accurate to say that they compute partial functions.
 
-
-
-### Builtins
-
-There are two primary built-in programs: increment (`+`) and decrement (`-`). As their names suggest, increment adds one to its input and decrement subtracts one from its input. However, decrement can fail if applied to input `0` (since doing so would not produce a natural number).
-
-
-
-### Composition
-
-Programs can be composed by writing them in sequence: `+ + +` is the composition of `+` three times in a row. Unlike standard function composition, these programs are evaluated left to right: `a b c` evaluates as `a` then `b` then `c`.
-
-If any program in a composition fails, then the resulting program also fails: `- - -` fails on input `0`, `1`, and `2`.
-
-We can similarly compose user-defined programs. If `f` is defined as `+ +` and `g` is defined as `- - -`, then `f g` evaluates as `+ + - - -`, which is semantically equivalent to `-`.
-
-
-
-### Branching
-
-Program complexity comes from the ability to have branching execution paths. Given programs `f` and `g`, the branching program `f | g` evaluates as `f` unless `f` fails, in which case it evaluates as `g`. For example, `- | +` maps `0` to `1` because it first tries to decrement `0`, fails to do so, and then increments `0`. For all other natural numbers, `- | +` is equivalent to `-`.
-
-The branching operator `|` is left-associative and will try evaluating branches from left to right: `a | b | c` evaluates as `a` unless `a` fails, then evaluates as `b` unless `b` fails, and finally evaluates as `c`.
-
-Lastly, empty branches are treated as instances of the identity function: `- |` has branches `-` and ` `. It maps `0` to `0` and all other natural numbers `x` to `x - 1`.
+The beauty of this language is in its simplicity. There are only two built-in functions: increment and decrement, and only two ways to combine existing functions into new ones: composition and alternation. Despite this simplicity, Unarian is capable of representing arbitrary computable functions.
 
 
 
 ### Syntax
 
+Line comments start with `#` and are stripped from the program before parsing. The remainder of the program is split into tokens: strings of arbitrary non-whitespace characters separated from each other by whitespace. Three tokens are considered reserved: `{`, `}`, and `|`. A few additional tokens have built-in behavior: `+`, and `-` (and sometimes `?`, `!`, and `@`). All other tokens are valid function identifiers.
+
+A Unarian program consists of a sequence of function definitions. If it defines a `main` function, this is considered the entry-point for the program. A function definition consists of an identifier, an opening brace `{`, the content of the function, and finally a matching closing brace `}`. Within function definitions, braces are used to group expressions together.
+
+
+
+### Built-ins
+
+There are two primary built-in functions: increment `+` and decrement `-`. As their names suggest, increment adds one to its input and decrement subtracts one from its input. However, decrement can fail if applied to input $0$ (since doing so would not produce a natural number). Some implementations (including this one) may add additional built-in functions such as: input `?`, output `!`, and stack trace `@`. At the moment, these are non-standard parts of the language and largely used for debugging purposes.
+
+
+
+### Composition
+
+Composition is one method of combining existing functions to create a new one. It is an associative binary operator over Unarian functions. Syntactically, the composition of functions `f` and `g` is written as `f g`.
+
+Evaluating a composition on input $x$ consists of evaluating each function from left to right on the output of the previous function. The result of the composition is the result of the last function to be evaluated. For example, if `^2` is a function that squares its input, then `^2 +` maps $x$ to $x^2 + 1$ and `+ ^2` maps $x$ to $(x + 1)^2$. Observe that this is similar to standard function composition in mathematics, except with the order of evaluation reversed. Significantly, if any function in a composition fails, then the composite function as a whole also fails. For example, `- - -` fails on input $0$, $1$, or $2$, and returns $n - 3$ on input $n > 2$.
+
+Finally, an empty composition is treated as the identity function, which turns out to be the identity element of function composition. Syntactically, an empty composition can be written as an empty group `{ }`.
+
+
+
+### Alternation
+
+Alternation (formerly called branching) is the second method of combining existing functions. It is an associative binary operator over Unarian functions. Syntactically, the alternation of functions `f` and `g` is written as `f | g`. This operator has a lower precedence than composition, so `f g | h` is equivalent to `{ f g } | h` and `f | g h` is equivalent to `f | { g h }`.
+
+Evaluating an alternation on input $x$ consists of evaluating each function from left to right on input $x$ if and only if all previous functions failed. The result of the alternation is the result of the last function to be evaluated. For example, if `%2` is a function that fails on odd inputs and leaves leaves all others unchanged, then `%2 + | -` maps $2x$ to $2x + 1$ and $2x + 1$ to $2x$. Syntactically, an empty 'branch' of an alternation is considered to be an instance of the identity function. For example, `- | ` is semantically equivalent to `- | { }`, where `{ }` is the identity function.
+
+Finally, since there is no way to represent them syntactically, we don't define the behavior of empty alternations (although it seems logical to define an empty alternation as a function that fails on all input, since this is the identity element of function alternation).
+
+
+
+### Learn by Example
+
 ```
-# Basic function definition.
+# This is a comment.
+
+# This is a basic function definition.
 function_name { function_definition }
 
 # Extra spacing doesn't matter.
