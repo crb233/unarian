@@ -1,10 +1,21 @@
-#!/usr/bin/env python3
-
 import sys
 import argparse
 import pathlib
 
-from unarian import Unarian
+from unarian.parser import (
+    ParserInternalError,
+    ParserError,
+)
+
+from unarian.interpreter import (
+    InterpreterInternalError,
+    InterpreterError,
+)
+
+from unarian.interface import Unarian
+
+
+
 
 #========================#
 # Command-Line Interface #
@@ -32,7 +43,7 @@ def get_argparser():
         help='Evaluates the input from stdin. Incompatible with \'--compile\'.')
     return ap
 
-def main(argv):
+def run(argv):
     ap = get_argparser()
     args = ap.parse_args(argv)
     
@@ -110,10 +121,7 @@ def main(argv):
             print(y if y is not None else '-')
         
     except ParserError as err:
-        pass
+        print(err.msg, file=sys.stderr)
         
     except InterpreterError as err:
-        pass
-
-if __name__ == '__main__':
-    main(sys.argv[1:])
+        print(err.msg, file=sys.stderr)

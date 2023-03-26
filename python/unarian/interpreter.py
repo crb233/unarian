@@ -1,12 +1,13 @@
 from unarian.base import UnarianError
 
-import unarian.parser
 from unarian.parser import (
     BuiltinType,
     Expression,
     Builtin,
     Function,
     Group,
+    
+    parse_expr,
 )
 
 
@@ -109,7 +110,7 @@ def evaluate(lib, obj=None, x=None, *, debug=None, max_depth=None):
     if max_depth is None: max_depth = 20_000
     
     if isinstance(obj, str):
-        expr = unarian.parser.parse_expr(obj, lib)
+        expr = parse_expr(obj, lib)
     elif isinstance(obj, Expression):
         expr = obj
     else:

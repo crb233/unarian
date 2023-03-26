@@ -6,9 +6,26 @@ The beauty of this language is in its simplicity. There are only two built-in fu
 
 
 
+## This Repository
+
+This repository contains:
+- [a short language specification](#language-specification),
+- [several example programs](./examples)
+- [an involved Python interpreter](./python)
+- and a [minimalistic Python interpreter](./python_min).
+
+Planned additions include:
+- a simple Visual Studio Code extension for syntax highlighting,
+- a minimalistic C interpreter,
+- and a fully-featured Rust interpreter including a custom bytecode format.
+
+
+
+## Language Specification
+
 ### Syntax
 
-Line comments start with `#` and are stripped from the source code before parsing. The remainder of the code is split into tokens: strings of arbitrary non-whitespace characters separated from each other by whitespace. Three tokens are considered reserved: `{`, `}`, and `|`. A few additional tokens have built-in behavior: `+`, and `-` (and sometimes `?`, `!`, and `@`). All other tokens are valid function identifiers.
+Line comments start with `#` and are stripped from the source code before parsing. The remainder of the code is split into tokens: strings of arbitrary non-whitespace characters separated from each other by whitespace. Three tokens are considered reserved keywords: `{`, `}`, and `|`. A few additional tokens have built-in behavior: `+`, and `-` (and sometimes `?`, `!`, and `@`). All other tokens are valid function identifiers.
 
 A Unarian program consists of a sequence of function definitions. If it defines a `main` function, this is considered the entry-point for the program. Otherwise it is considered a library rather than a standalone program. A function definition consists of an identifier, an opening brace `{`, the content of the function, and finally a matching closing brace `}`. Within function definitions, braces are used to group expressions together.
 
@@ -124,32 +141,4 @@ if/2 { - - if/2 + | if=0 }
 collatz { if>1 { if/2 | *3 + } collatz + | - }
 
 main { collatz }
-```
-
-
-
-### Usage
-
-Evaluates expression `{ - - | - + | + + }` on inputs `0`, `1`, `2`, `3`, `4`, and `5`.
-
-```
-echo 0 1 2 3 4 5 | ./unarian.py --expr '{ - - | - + | + + }' --input
-```
-
-Evaluates expression `{ - - | - + | + + }` with interactive input.
-
-```
-./unarian.py --expr '{ - - | - + | + + }' --input
-```
-
-Evaluates `main` from `examples/collatz.un` on inputs `1`, `2`, `3`, `4`, `5`, `6`, `7`, `8`, and `9`.
-
-```
-echo 1 2 3 4 5 6 7 8 9 | ./unarian.py examples/collatz.un --input
-```
-
-Evaluates `if/2` from `examples/collatz.un` on inputs `0`, `1`, `2`, `3`, `4`, and `5`.
-
-```
-echo 0 1 2 3 4 5 | ./unarian.py examples/collatz.un --expr 'if/2' --input
 ```

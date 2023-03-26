@@ -34,7 +34,7 @@ builtin_functions = {
     '+' : BuiltinType.Increment,
     '-' : BuiltinType.Decrement,
     '!' : BuiltinType.Print,
-    '?' : BuiltinType.Trace,
+    '@' : BuiltinType.Trace,
 }
 
 
