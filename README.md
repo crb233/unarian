@@ -4,6 +4,8 @@ Unarian (pronounced _yoo-NAIR-eein_) is an esoteric programming language based o
 
 The beauty of this language is in its simplicity. There are only two built-in functions: increment and decrement, and only two ways to combine existing functions into new ones: composition and alternation. Despite this simplicity, Unarian is capable of representing arbitrary computable functions.
 
+See also the [Esolangs](https://esolangs.org/wiki/Unarian) page for this language.
+
 
 
 ## This Repository
@@ -74,7 +76,7 @@ Finally, since there is no way to represent them syntactically, we don't define 
 
 When interpreting or compiling a Unarian program, an expression must be chosen as the entry-point. This entry-point defaults to `main`. Some implementations may allow the user to specify a custom expression as the entry-point, but this is not required. It is considered undefined behavior to have references to undefined functions or multiple definitions of the same function. However, it is recommended for implementations to treat both of these cases as compilation errors.
 
-Finally, a compiled or interpreted program is evaluated by giving it a non-negative integer input. This input is evaluated on the entry-point expression as explained above, and the resulting output, either a non-negative integer or a failure, is returned.
+Finally, a compiled or interpreted program is evaluated by giving it a non-negative integer input. This input is evaluated on the entry-point expression as explained above, and the resulting output, either a non-negative integer or a failure, is returned. Input and output representations are left undefined, but it is recommended for integers to be represented in decimal and for failure to be represented by `-`. Bounds on integer inputs and outputs, as well as the behevior when these bounds are exceeded, are also left undefined, but it is recommended that implementations support integers up to at least $2^63 - 1$ and produce a runtime error when exceeding their maximum value.
 
 
 
