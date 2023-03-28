@@ -1,6 +1,6 @@
 # Unarian
 
-Unarian is an esoteric programming language based on the concept that every operation computes a unary function over the natural numbers (hence the name Unarian). Running a Unarian program consists of evaluating such a function on a natural number input. These operations can explicitly fail or get stuck in infinite loops, so it's more accurate to say that they compute partial unary functions.
+Unarian (pronounced _yoo-NAIR-eein_) is an esoteric programming language based on the concept that every operation computes a unary function over the natural numbers (hence the name Unarian). Running a Unarian program consists of evaluating such a function on a natural number input. These operations can explicitly fail or get stuck in infinite loops, so it's more accurate to say that they compute partial unary functions.
 
 The beauty of this language is in its simplicity. There are only two built-in functions: increment and decrement, and only two ways to combine existing functions into new ones: composition and alternation. Despite this simplicity, Unarian is capable of representing arbitrary computable functions.
 
@@ -25,23 +25,36 @@ Planned additions include:
 
 ### Syntax
 
-Line comments start with `#` and are stripped from the source code before parsing. The remainder of the code is split into tokens: strings of arbitrary non-whitespace characters separated from each other by whitespace. Three tokens are considered reserved keywords: `{`, `}`, and `|`. A few additional tokens have built-in behavior: `+`, and `-` (and sometimes `?`, `!`, and `@`). All other tokens are valid function identifiers.
+Line comments start with `#` and are stripped from the source code before parsing. The remainder of the code is split into tokens: strings of arbitrary non-whitespace characters separated from each other by whitespace. Three tokens are considered special keywords: `{` (open brace), `}` (close brace), and `|` (alternation). A few additional tokens represent built-ins: `+` (increment), and `-` (decrement). Some implementations may also include `?` (input), `!` (output), and `@` (stack trace) as additional builtins. All other tokens are condiered valid function identifiers.
 
-A Unarian program consists of a sequence of function definitions. If it defines a `main` function, this is considered the entry-point for the program. Otherwise it is considered a library rather than a standalone program. A function definition consists of an identifier, an opening brace `{`, the content of the function, and finally a matching closing brace `}`. Within function definitions, braces are used to group expressions together.
+A Unarian expression is a sequence of alternations `|`, built-ins, identifiers, and bracketed groups, where a bracketed group consists of an opening brace `{`, an expression, and a closing brace `}`. For example, `- | + func { - - | } |` is an expression and `{ - { + func | } + }` is a bracketed group. A Unarian program consists of a sequence of function declarations, where a function declaration is an identifier (the function name) followed by a bracketed group (the function definition). For example, `f { - - | + }` declares a function named `f` defined as `{ - - | + }`, and the following program defines three functions `0`, `if=0`, and `main`:
+```
+0 { - 0 | }
+if=0 { { - 0 | + } - }
+main { if=0 + | 0 }
+```
 
 
 
 ### Built-ins
 
-There are two primary built-in functions: increment `+` and decrement `-`. As their names suggest, increment adds one to its input and decrement subtracts one from its input. However, decrement can fail if applied to input $0$ (since doing so would not produce a natural number). Some implementations (including this one) may add additional built-in functions such as: input `?`, output `!`, and stack trace `@`. At the moment, these are non-standard parts of the language and largely used for debugging purposes.
+There are two primary built-ins: increment `+` and decrement `-`. As their names suggest, increment adds one to its input and decrement subtracts one from its input. However, decrement can fail if applied to input $0$ (since doing so would not produce a natural number).
+
+Some implementations may add additional built-ins such as: input `?`, output `!`, and stack trace `@`. At the moment, these are non-standard parts of the language and largely used for debugging purposes.
+
+
+
+### Functions
+
+Functions are identified by their name and defined (possibly recursively) by an expression consisting of built-ins, functions, compositions, and alternations. To evaluate a function on input $x$, simply evaluate its definitional expression on input $x$. For example, if function `mod2` is defined by the expression `- - mod2 |`, then evaluating `mod2` on $x$ is semantically equivalent to evaluating `- - mod2 |` on $x$.
 
 
 
 ### Composition
 
-Composition is one method of combining existing functions to create a new one. It is an associative binary operator over Unarian functions. Syntactically, the composition of functions `f` and `g` is written as `f g`.
+Composition is one method of combining existing functions to create new ones. It is an associative binary operator over Unarian functions. Syntactically, the composition of functions `f` and `g` is written as `f g`.
 
-Evaluating a composition on input $x$ consists of evaluating each function from left to right on the output of the previous function. The result of the composition is the result of the last function to be evaluated. For example, if `^2` is a function that squares its input, then `^2 +` maps $x$ to $x^2 + 1$ and `+ ^2` maps $x$ to $(x + 1)^2$. Observe that this is similar to standard function composition in mathematics, except with the order of evaluation reversed. Significantly, if any function in a composition fails, then the composite function as a whole also fails. For example, `- - -` fails on input $0$, $1$, or $2$, and returns $n - 3$ on input $n > 2$.
+Evaluating a composition on input $x$ consists of evaluating each function from left to right on the output of the previous function. The result of the composition is the result of the last function to be evaluated. For example, if `^2` is a function that squares its input, then `^2 +` maps $x$ to $x^2 + 1$ and `+ ^2` maps $x$ to $(x + 1)^2$. Observe that this is similar to standard function composition in mathematics, except with the order of evaluation reversed. Significantly, if any function in a composition fails, then the composite function as a whole also fails. For example, `- - -` fails on input $0$, $1$, and $2$, and returns $n - 3$ on input $n > 2$.
 
 Finally, an empty composition is treated as the identity function, which turns out to be the identity element of function composition. Syntactically, an empty composition can be written as an empty group `{ }`.
 
@@ -54,6 +67,14 @@ Alternation (formerly called branching) is the second method of combining existi
 Evaluating an alternation on input $x$ consists of evaluating each function from left to right on input $x$ if and only if all previous functions failed. The result of the alternation is the result of the last function to be evaluated. For example, if `%2` is a function that fails on odd inputs and leaves all others unchanged, then `%2 + | -` maps $2x$ to $2x + 1$ and $2x + 1$ to $2x$. Syntactically, an empty 'branch' of an alternation is considered to be an instance of the identity function. For example, `- | ` is semantically equivalent to `- | { }`, where `{ }` is the identity function.
 
 Finally, since there is no way to represent them syntactically, we don't define the behavior of empty alternations (although it seems logical to define an empty alternation as a function that fails on all input, since this is the identity element of function alternation).
+
+
+
+### Evaluation
+
+When interpreting or compiling a Unarian program, an expression must be chosen as the entry-point. This entry-point defaults to `main`. Some implementations may allow the user to specify a custom expression as the entry-point, but this is not required. It is considered undefined behavior to have references to undefined functions or multiple definitions of the same function. However, it is recommended for implementations to treat both of these cases as compilation errors.
+
+Finally, a compiled or interpreted program is evaluated by giving it a non-negative integer input. This input is evaluated on the entry-point expression as explained above, and the resulting output, either a non-negative integer or a failure, is returned.
 
 
 
@@ -74,8 +95,8 @@ example_func {
 }
 
 # Function names can contain any characters except whitespace and '#'.
-# Strings '+', '-', '!', and '?' are built-in and cannot be redefined.
-# Strings '{', '|', and '}' have special meaning.
+# Strings '{', '|', and '}' are special keywords and cannot be function names.
+# Strings '+', '-', '?', '!', and '@' are built-in and cannot be redefined.
 *10 { multiply_by_10 }
 /10 { divide_by_10 }
 ^2 { square }
