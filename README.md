@@ -4,7 +4,7 @@ Unarian (pronounced _yoo-NAIR-eein_) is an esoteric programming language based o
 
 The beauty of this language is in its simplicity. There are only two built-in functions: increment and decrement, and only two ways to combine existing functions into new ones: composition and alternation. Despite this simplicity, Unarian is capable of representing arbitrary computable functions.
 
-See also the [Esolangs](https://esolangs.org/wiki/Unarian) page for this language.
+See also the [Esolangs page](https://esolangs.org/wiki/Unarian) for this language.
 
 
 
@@ -12,12 +12,12 @@ See also the [Esolangs](https://esolangs.org/wiki/Unarian) page for this languag
 
 This repository contains:
 - [a short language specification](#language-specification),
-- [several example programs](./examples)
-- [an involved Python interpreter](./python)
+- [several example programs](./examples),
+- [a simple VS Code extension](./vscode),
+- [an involved Python interpreter](./python),
 - and a [minimalistic Python interpreter](./python_min).
 
 Planned additions include:
-- a simple Visual Studio Code extension for syntax highlighting,
 - a minimalistic C interpreter,
 - and a fully-featured Rust interpreter including a custom bytecode format.
 

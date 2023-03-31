@@ -1,0 +1,78 @@
+{
+	"name": "Unarian",
+	"fileTypes": [
+		"unarian"
+	],
+	"scopeName": "source.unarian",
+    
+	"foldingStartMarker": "(?<!\\S)\\{\\s*$",
+	"foldingStopMarker": "^\\s*\\}(?!\\S)",
+	
+	"patterns": [
+		{ "include": "#comment" },
+		{ "include": "#definition" },
+		{ "include": "#error" }
+    ],
+    "repository": {
+		"comment": {
+			"name": "comment.line",
+			"match": "(#).*$",
+			"captures": {
+				"1": { "name": "comment.line.number-sign" }
+			}
+		},
+		"definition": {
+			"name": "meta.definition",
+			"begin": "(?<!\\S)(\\S{2,}|[^\\s{|}+-])\\s+(\\{)(?!\\S)",
+			"end": "(?<!\\S)(\\})(?!\\S)",
+			"beginCaptures": {
+				"1": { "name": "variable.function" },
+				"2": { "name": "keyword.operator" }
+			},
+			"endCaptures": {
+				"1": { "name": "keyword.operator" }
+			},
+			"patterns": [
+				{ "include": "#comment" },
+				{ "include": "#expression" },
+				{ "include": "#alternation" }
+			]
+		},
+		"group": {
+			"name": "meta.group",
+			"begin": "(?<!\\S)(\\{)(?!\\S)",
+			"end": "(?<!\\S)(\\})(?!\\S)",
+			"beginCaptures": {
+				"1": { "name": "keyword.operator" }
+			},
+			"endCaptures": {
+				"1": { "name": "keyword.operator" }
+			},
+			"patterns": [
+				{ "include": "#comment" },
+				{ "include": "#expression" },
+				{ "include": "#alternation" }
+			]
+		},
+		"expression": {
+			"patterns": [
+				{ "include": "#comment" },
+				{ "include": "#builtin" },
+				{ "include": "#function" },
+				{ "include": "#group" }
+			]
+		},
+		"builtin": {
+			"name": "entity.name.constant",
+			"match": "(?<!\\S)[+-?!](?!\\S)"
+		},
+		"function": {
+			"name": "entity.name.function",
+			"match": "(?<!\\S)(\\S{2,}|[^{|}+-?!])(?!\\S)"
+		},
+		"alternation": {
+			"name": "keyword.operator",
+			"match": "(?<!\\S)\\|(?!\\S)"
+		}
+	}
+}

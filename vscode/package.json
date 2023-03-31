@@ -1,0 +1,60 @@
+{
+    "name": "unarian",
+    "displayName": "Unarian",
+    "description": "Support for the Unarian esoteric programming language.",
+    "version": "0.1.0",
+    "author": "crb233",
+    "publisher": "crb233",
+    "homepage": "https://github.com/crb233/unarian/blob/master/README.md",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/crb233/unarian.git"
+    },
+    "engines": {
+        "vscode": "^1.70.0"
+    },
+    "license": "MIT",
+    "categories": [
+        "Programming Languages"
+    ],
+    "keywords": [
+        "un",
+        "unary",
+        "esoteric",
+        "esolang",
+        "tarpit"
+    ],
+    "icon": "icons/unarian_256.png",
+    "contributes": {
+        "languages": [
+            {
+                "id": "unarian",
+                "extensions": [
+                    ".un",
+                    ".unarian"
+                ],
+                "aliases": [
+                    "Unarian"
+                ],
+                "configuration": "./syntaxes/unarian-language-configuration.json",
+                "icon": {
+                    "light": "./icons/unarian_32.png",
+                    "dark": "./icons/unarian_32.png"
+                }
+            }
+        ],
+        "grammars": [
+            {
+                "language": "unarian",
+                "scopeName": "source.unarian",
+                "path": "./syntaxes/unarian.json"
+            }
+        ],
+        "configurationDefaults": {
+            "[unarian]": {
+                "editor.wordSeparators": "",
+                "editor.bracketPairColorization.enabled": false
+            }
+        }
+    }
+}
