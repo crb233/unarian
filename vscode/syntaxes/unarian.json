@@ -10,8 +10,8 @@
 	
 	"patterns": [
 		{ "include": "#comment" },
-		{ "include": "#definition" },
-		{ "include": "#error" }
+		{ "include": "#function" },
+		{ "include": "#definition" }
     ],
     "repository": {
 		"comment": {
@@ -21,20 +21,23 @@
 				"1": { "name": "comment.line.number-sign" }
 			}
 		},
+		"function": {
+			"name": "variable.function",
+			"match": "(?<!\\S)(\\S{2,}|[^-+?!{|}])(?!\\S)"
+		},
 		"definition": {
 			"name": "meta.definition",
-			"begin": "(?<!\\S)(\\S{2,}|[^\\s{|}+-])\\s+(\\{)(?!\\S)",
+			"begin": "(?<!\\S)(\\{)(?!\\S)",
 			"end": "(?<!\\S)(\\})(?!\\S)",
 			"beginCaptures": {
-				"1": { "name": "variable.function" },
-				"2": { "name": "keyword.operator" }
+				"1": { "name": "variable.function" }
 			},
 			"endCaptures": {
-				"1": { "name": "keyword.operator" }
+				"1": { "name": "variable.function" }
 			},
 			"patterns": [
 				{ "include": "#comment" },
-				{ "include": "#expression" },
+				{ "include": "#term" },
 				{ "include": "#alternation" }
 			]
 		},
@@ -43,35 +46,35 @@
 			"begin": "(?<!\\S)(\\{)(?!\\S)",
 			"end": "(?<!\\S)(\\})(?!\\S)",
 			"beginCaptures": {
-				"1": { "name": "keyword.operator" }
+				"1": { "name": "keyword.control" }
 			},
 			"endCaptures": {
-				"1": { "name": "keyword.operator" }
+				"1": { "name": "keyword.control" }
 			},
 			"patterns": [
 				{ "include": "#comment" },
-				{ "include": "#expression" },
+				{ "include": "#term" },
 				{ "include": "#alternation" }
 			]
 		},
-		"expression": {
+		"term": {
 			"patterns": [
 				{ "include": "#comment" },
 				{ "include": "#builtin" },
-				{ "include": "#function" },
+				{ "include": "#identifier" },
 				{ "include": "#group" }
 			]
 		},
 		"builtin": {
-			"name": "entity.name.constant",
-			"match": "(?<!\\S)[+-?!](?!\\S)"
+			"name": "constant.language",
+			"match": "(?<!\\S)[-+?!](?!\\S)"
 		},
-		"function": {
+		"identifier": {
 			"name": "entity.name.function",
-			"match": "(?<!\\S)(\\S{2,}|[^{|}+-?!])(?!\\S)"
+			"match": "(?<!\\S)(\\S{2,}|[^-+?!{|}])(?!\\S)"
 		},
 		"alternation": {
-			"name": "keyword.operator",
+			"name": "keyword.control",
 			"match": "(?<!\\S)\\|(?!\\S)"
 		}
 	}
