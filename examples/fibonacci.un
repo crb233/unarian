@@ -1,3 +1,21 @@
+# This Unarian program takes input n and computes the nth Fibonacci number.
+# 
+# While this would be a simple task in common programming languages, it's much
+# more difficult in Unarian, since there's only one accessible integer at any
+# point in the execution of the program. As far as I can tell, computing
+# Fibonacci numbers requires being able to store multiple integers in memory.
+# This means that it's necessary to design functions for encode and decoding
+# values from 'virtual' integers (also called registers) stored in a single
+# integer. Most of the complexity of this program comes from these functions.
+# 
+# The strategy for storing virtual integers is to interlace the bits of three
+# integers together. For example, we can store 0b1111, 0b1, and 0b10110 by:
+# spacing out their bits: 0b1__1__1__1, 0b1, and 0b1__0__1__1__0; shifting two
+# of them up: 0b1__1__1__1, 0b1_, and 0b1__0__1__1__0__; bitwise combining the
+# results together: 0b1__0_11_11_1011; and filling the gaps 0b100001101101011.
+# It's  not hard to see that this process is reversible and can be used to
+# retrieve any one of the stored integers.
+
 #========#
 # Basics #
 #========#

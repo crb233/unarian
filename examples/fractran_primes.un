@@ -1,3 +1,16 @@
+# This Unarian program computes successive primes and, if running in debug
+# mode, it will print out every prime encountered.
+# 
+# Runs the following Fractran algorithm for generating primes (taken from the
+# Fractran page on Esolang https://esolangs.org/wiki/Fractran):
+#     3/11 847/45 143/6 7/3 10/91 3/7 36/325 1/2 36/5
+# 
+# This program is particularly interesting because it shows how to write
+# Unarian code that can simulate an arbitrary Fractran program. Since Fractran
+# is known to be Turing complete, it must be that Unarian also is. Of course,
+# this isn't really a proof, but it shows how one could go about constructing
+# a formal proof.
+
 #========#
 # Basics #
 #========#
@@ -74,11 +87,6 @@ iflog10 { if>1 if/10 iflog10 + | if=1 }
 #=================#
 # Fractran Primes #
 #=================#
-
-# Runs the following Fractran algorithm for generating primes (taken from the
-# Fractran page on Esolang https://esolangs.org/wiki/Fractran):
-#     3/11 847/45 143/6 7/3 10/91 3/7 36/325 1/2 36/5
-# If running in debug mode, it will print out every prime it encounters.
 
 print_power_of_10 { iflog10 ! 0 - | }
 
