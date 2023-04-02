@@ -2,9 +2,9 @@
 # Collatz map required to get from n to 1.
 # 
 # The Collatz map is a function that takes a positive integer n as input and
-# outputs n/2 if n is even and 3n+1 otherwise. It was made famous by the
-# Collatz conjecture, which says that every integer n eventually reaches 1
-# repeated application of the Collatz map.
+# outputs n/2 if n is even and 3n+1 otherwise. It was made famous by the Collatz
+# conjecture, which says that every integer n eventually reaches 1 repeated
+# application of the Collatz map.
 # 
 # See https://en.wikipedia.org/wiki/Collatz_conjecture for more.
 

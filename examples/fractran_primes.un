@@ -1,15 +1,16 @@
-# This Unarian program computes successive primes and, if running in debug
-# mode, it will print out every prime encountered.
+# This Unarian program computes successive primes and, if running in debug mode,
+# it will print out every prime encountered.
 # 
 # Runs the following Fractran algorithm for generating primes (taken from the
 # Fractran page on Esolang https://esolangs.org/wiki/Fractran):
-#     3/11 847/45 143/6 7/3 10/91 3/7 36/325 1/2 36/5
 # 
-# This program is particularly interesting because it shows how to write
-# Unarian code that can simulate an arbitrary Fractran program. Since Fractran
-# is known to be Turing complete, it must be that Unarian also is. Of course,
-# this isn't really a proof, but it shows how one could go about constructing
-# a formal proof.
+# 3/11 847/45 143/6 7/3 10/91 3/7 36/325 1/2 36/5
+# 
+# This program is particularly interesting because it shows how to write Unarian
+# code that can simulate an arbitrary Fractran program. Since Fractran is known
+# to be Turing complete, it must be that Unarian also is. Of course, this isn't
+# really a proof, but it shows how one could go about constructing a formal
+# proof.
 
 #========#
 # Basics #
@@ -88,22 +89,23 @@ iflog10 { if>1 if/10 iflog10 + | if=1 }
 # Fractran Primes #
 #=================#
 
-print_power_of_10 { iflog10 ! 0 - | }
-
-fractran_primes' {
-    print_power_of_10 {
-          if/11           *3
-        | if/3 if/3 if/5  *7 *11 *11
-        | if/2 if/3       *11 *13
-        | if/3            *7
-        | if/7 if/13      *2 *5
-        | if/7            *3
-        | if/5 if/5 if/13 *2 *2 *3 *3
-        | if/2
-        | if/5            *2 *2 *3 *3
-    } fractran_primes'
+fracran_primes
+    { if/11           *3
+    | if/3 if/3 if/5  *7 *11 *11
+    | if/2 if/3       *11 *13
+    | if/3            *7
+    | if/7 if/13      *2 *5
+    | if/7            *3
+    | if/5 if/5 if/13 *2 *2 *3 *3
+    | if/2
+    | if/5            *2 *2 *3 *3
 }
 
-fractran_primes { 0 +10 fractran_primes' }
+print_power_of_10 { iflog10 ! 0 - | }
+all_primes' { print_power_of_10 fracran_primes all_primes' }
+all_primes { 0 +10 all_primes' }
 
-main { fractran_primes }
+next_prime' { iflog10 | fracran_primes next_prime' }
+next_prime { exp10 fracran_primes next_prime' }
+
+main { next_prime }
