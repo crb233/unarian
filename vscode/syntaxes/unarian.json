@@ -10,6 +10,7 @@
 	
 	"patterns": [
 		{ "include": "#comment" },
+		{ "include": "#error" },
 		{ "include": "#function" },
 		{ "include": "#definition" }
     ],
@@ -21,19 +22,23 @@
 				"1": { "name": "comment.line.number-sign" }
 			}
 		},
+		"error": {
+			"name": "invalid",
+			"match": "(?<!\\S)[-+?!@|}](?!\\S)"
+		},
 		"function": {
 			"name": "variable.function",
-			"match": "(?<!\\S)(\\S{2,}|[^-+?!{|}])(?!\\S)"
+			"match": "(?<!\\S)(\\S{2,}|[^-+?!@{|}])(?!\\S)"
 		},
 		"definition": {
 			"name": "meta.definition",
 			"begin": "(?<!\\S)(\\{)(?!\\S)",
 			"end": "(?<!\\S)(\\})(?!\\S)",
 			"beginCaptures": {
-				"1": { "name": "variable.function" }
+				"1": { "name": "keyword.operator" }
 			},
 			"endCaptures": {
-				"1": { "name": "variable.function" }
+				"1": { "name": "keyword.operator" }
 			},
 			"patterns": [
 				{ "include": "#comment" },
@@ -46,10 +51,10 @@
 			"begin": "(?<!\\S)(\\{)(?!\\S)",
 			"end": "(?<!\\S)(\\})(?!\\S)",
 			"beginCaptures": {
-				"1": { "name": "keyword.control" }
+				"1": { "name": "keyword.operator" }
 			},
 			"endCaptures": {
-				"1": { "name": "keyword.control" }
+				"1": { "name": "keyword.operator" }
 			},
 			"patterns": [
 				{ "include": "#comment" },
@@ -67,14 +72,14 @@
 		},
 		"builtin": {
 			"name": "constant.language",
-			"match": "(?<!\\S)[-+?!](?!\\S)"
+			"match": "(?<!\\S)[-+?!@](?!\\S)"
 		},
 		"identifier": {
 			"name": "entity.name.function",
-			"match": "(?<!\\S)(\\S{2,}|[^-+?!{|}])(?!\\S)"
+			"match": "(?<!\\S)(\\S{2,}|[^-+?!@{|}])(?!\\S)"
 		},
 		"alternation": {
-			"name": "keyword.control",
+			"name": "keyword.operator",
 			"match": "(?<!\\S)\\|(?!\\S)"
 		}
 	}
