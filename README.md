@@ -1,8 +1,8 @@
 # Unarian
 
-Unarian (pronounced _yoo-NAIR-eein_) is an esoteric programming language based on the concept that every operation computes a unary function over the natural numbers (hence the name Unarian). Running a Unarian program consists of evaluating such a function on a natural number input. These operations can explicitly fail or get stuck in infinite loops, so it's more accurate to say that they compute partial unary functions.
+Unarian (pronounced _yoo-NAIR-eein_) is an [esoteric programming language](https://en.wikipedia.org/wiki/Esoteric_programming_language) based on the concept that every Unarian function computes a partial unary function over the natural numbers (hence the name Unarian) and that these functions can only be constructed as combinations of existing functions.
 
-The beauty of this language is in its simplicity. There are only two built-in functions: increment and decrement, and only two ways to combine existing functions into new ones: composition and alternation. Despite this simplicity, Unarian is capable of representing arbitrary computable functions.
+The beauty of this language is in its simplicity. There are only two built-in functions: increment and decrement; only two ways to combine existing functions into new ones: composition and alternation; and effectively only one integer that can be accessed by running programs. Despite this simplicity, Unarian is Turing-complete and capable of representing arbitrary computable functions.
 
 See also the [Esolangs page](https://esolangs.org/wiki/Unarian) for this language.
 
@@ -12,7 +12,7 @@ See also the [Esolangs page](https://esolangs.org/wiki/Unarian) for this languag
 
 This repository contains:
 - [a short language specification](#language-specification),
-- [several example programs](./examples),
+- [several interesting example programs](./examples),
 - [a simple VS Code extension](./vscode),
 - [an involved Python interpreter](./python),
 - and a [minimalistic Python interpreter](./python_min).
@@ -148,32 +148,4 @@ less_complex { a code_1 d | code_3 g }   # This is equivalent to 'complex'.
 # The main function is the default entry-point for a program. It's evaluated
 # when we run this program.
 main { get_nth_prime }
-```
-
-
-
-### Example
-
-Here is an example taken from `examples/collatz.un`:
-
-```
-# Outputs 0.
-0 { - 0 | }
-
-# Fails unless input is equal to 0.
-if=0 { { - 0 | + } - }
-
-# Fails unless input is greater than 1.
-if>1 { - - + + }
-
-# Divides by 2 if divisible by 2. Fails otherwise.
-if/2 { - - if/2 + | if=0 }
-
-# Multiplies by 3.
-*3 { - *3 + + + | }
-
-# Outputs the number of collatz steps required to reach 1.
-collatz { if>1 { if/2 | *3 + } collatz + | - }
-
-main { collatz }
 ```
