@@ -54,21 +54,29 @@ Functions are identified by their name and defined (possibly recursively) by an 
 
 ### Composition
 
-Composition is one method of combining existing functions to create new ones. It is an associative binary operator over Unarian functions. Syntactically, the composition of functions `f` and `g` is written as `f g`.
+Composition is one method of combining existing functions to create new ones. It is an associative binary operator over Unarian functions that is comparable to sequential execution (e.g. `a; b`) in imperative languages. Syntactically, the composition of functions `f` and `g` is written as `f g`.
 
 Evaluating a composition on input $x$ consists of evaluating each function from left to right on the output of the previous function. The result of the composition is the result of the last function to be evaluated. For example, if `^2` is a function that squares its input, then `^2 +` maps $x$ to $x^2 + 1$ and `+ ^2` maps $x$ to $(x + 1)^2$. Observe that this is similar to standard function composition in mathematics, except with the order of evaluation reversed. Significantly, if any function in a composition fails, then the composite function as a whole also fails. For example, `- - -` fails on input $0$, $1$, and $2$, and returns $n - 3$ on input $n > 2$.
 
-Finally, an empty composition is treated as the identity function, which turns out to be the identity element of function composition. Syntactically, an empty composition can be written as an empty group `{ }`.
+Finally, an empty composition is treated as the identity function, which turns out to be the identity element of function composition. Syntactically, an empty composition can be written as an empty group `{ }` or an empty expression ` `.
 
 
 
 ### Alternation
 
-Alternation (formerly called branching) is the second method of combining existing functions. It is an associative binary operator over Unarian functions. Syntactically, the alternation of functions `f` and `g` is written as `f | g`. This operator has a lower precedence than composition, so `f g | h` is equivalent to `{ f g } | h` and `f | g h` is equivalent to `f | { g h }`.
+Alternation (formerly called branching) is the second method of combining existing functions. It is an associative binary operator over Unarian functions that is comparable to conditional control flow (e.g. `if c then a else b`) in imperative languages. Syntactically, the alternation of functions `f` and `g` is written as `f | g`. This operator has a lower precedence than composition, so `f g | h` is interpreted as the alternation of `f g` and `h` (written `{ f g } | h`), and `f | g h` is interpreted as the alternation of `f` and `g h` (written `f | { g h }`).
 
-Evaluating an alternation on input $x$ consists of evaluating each function from left to right on input $x$ if and only if all previous functions failed. The result of the alternation is the result of the last function to be evaluated. For example, if `%2` is a function that fails on odd inputs and leaves all others unchanged, then `%2 + | -` maps $2x$ to $2x + 1$ and $2x + 1$ to $2x$. Syntactically, an empty 'branch' of an alternation is considered to be an instance of the identity function. For example, `- | ` is semantically equivalent to `- | { }`, where `{ }` is the identity function.
+Evaluating an alternation on input $x$ consists of evaluating each function from left to right on input $x$ if and only if all previous functions failed. The result of the alternation is the result of the last function to be evaluated. For example, if `%2` is a function that fails on odd inputs and leaves all others unchanged, then `%2 + | -` maps $2x$ to $2x + 1$ and $2x + 1$ to $2x$ (i.e. it toggles the last bit in a binary number). Syntactically, an empty 'branch' of an alternation is considered to be an empty composition. For example, `- | ` is semantically equivalent to both `- | { }` and `- | id`, where `id` is an identity function.
 
 Finally, since there is no way to represent them syntactically, we don't define the behavior of empty alternations (although it seems logical to define an empty alternation as a function that fails on all input, since this is the identity element of function alternation).
+
+
+
+### Grouping
+
+Bracketed groups within an expression, which are surrounded by braces and can be nested, allow for the formation of expressions that don't follow normal precedence rules. While `a b | c` is interpreted as the alternation of `a b` and `c`, the expression `a { b | c }` is interpreted as the composition of `a` and `b | c`.
+
+Evaluating an exression containing a bracketed group can be done by treating the group as a reference to a new function defined by the contents of the group. Specifically, we can evaluate `a { b | c }` by defining a new function `b|c { b | c }` and then evaluating `a b|c`. In general, for any expression containing a bracketed group `{ ... }`, define a new function `z { ... }` and replace all instances of `{ ... }` (aside from the definition of `z` itself) by `z`. For example, if `0` is a function that maps all $x$ to $0$, then the expression `- 0 | + -` also maps all $x$ to $0$. However, by adding braces, we can change this to `{ - 0 | + } -`, which maps $0$ to $0$ and fails on all other $x$ (i.e. it checks for equality with $0$).
 
 
 
@@ -97,8 +105,8 @@ example_func {
 }
 
 # Function names can contain any characters except whitespace and '#'.
-# Strings '{', '|', and '}' are special keywords and cannot be function names.
-# Strings '+', '-', '?', '!', and '@' are built-in and cannot be redefined.
+# Tokens '{', '|', and '}' are special keywords and cannot be function names.
+# Tokens '+', '-', '?', '!', and '@' are built-in and cannot be redefined.
 *10 { multiply_by_10 }
 /10 { divide_by_10 }
 ^2 { square }
@@ -121,21 +129,25 @@ subtract_2_or_fail { - - }
 print_then_add_1 { ! + }
 print_stack_trace { @ }
 
-# Functions can have branching execution paths. The special string '|' is
-# used to separate different branches.
+# Functions can have branching execution paths. The special token '|', called
+# alternation, is used to separate alternate paths.
 do_A_or_B_or_C { A | B | C }
 
-# Empty branches act as the identity function.
+# Empty alternates act as the identity function.
 subtract_2_or_do_nothing { - - | }
 
-# A nested code block starts with '{' and ends with '}'. Code blocks are
-# evaluated as if their contents had been defined as a separate function.
+# A bracketed group starts with '{' and ends with '}'. Such groups are
+# evaluated as if their contents had been defined in a separate function.
 complex { a { b | c } d | { e | { f } } g }
 
 code_1 { b | c }
 code_2 { f }
 code_3 { e | code_2 }
 less_complex { a code_1 d | code_3 g }   # This is equivalent to 'complex'.
+
+# The main function is the default entry-point for a program. It's evaluated
+# when we run this program.
+main { get_nth_prime }
 ```
 
 
