@@ -14,6 +14,7 @@ This repository contains:
 - [a short language specification](#language-specification),
 - [several interesting example programs](./examples),
 - [a simple VS Code extension](./vscode),
+- [a minimalistic Rust interpreter](./rust_min),
 - [an involved Python interpreter](./python),
 - and a [minimalistic Python interpreter](./python_min).
 
