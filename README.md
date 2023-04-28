@@ -29,12 +29,14 @@ Planned additions include:
 
 Line comments start with `#` and are stripped from the source code before parsing. The remainder of the code is split into tokens: strings of arbitrary non-whitespace characters separated from each other by whitespace. Three tokens are considered special keywords: `{` (open brace), `}` (close brace), and `|` (alternation). A few additional tokens represent built-ins: `+` (increment), and `-` (decrement). Some implementations may also include `?` (input), `!` (output), and `@` (stack trace) as additional built-ins. All other tokens are considered valid function identifiers.
 
-A Unarian expression is a sequence of alternations `|`, built-ins, identifiers, and bracketed groups, where a bracketed group consists of an opening brace `{`, an expression, and a closing brace `}`. For example, `- | + func { - - | } |` is an expression and `{ - { + func | } + }` is a bracketed group. A Unarian program consists of a sequence of function declarations, where a function declaration is an identifier (the function name) followed by a bracketed group (containing the function definition). For example, `f { - - | + }` declares a function named `f` defined by the expression `- - | +`, and the following program defines three functions `0`, `if=0`, and `main`:
+A Unarian expression is a sequence of alternations `|`, built-ins, identifiers, and bracketed groups, where a bracketed group consists of an opening brace `{`, an expression, and a closing brace `}`. For example, `- | + func { - - | } |` is an expression and `{ - { + func | } + }` is a bracketed group. A Unarian library consists of a sequence of function declarations, where a function declaration is an identifier (the function name) followed by a bracketed group (containing the function definition). Every Unarian source code file defines a library. For example, `f { - - | + }` declares a function named `f` defined by the expression `- - | +`, and the following library defines three functions `0`, `if=0`, and `main`:
 ```
 0 { - 0 | }
 if=0 { { - 0 | + } - }
 main { if=0 + | 0 }
 ```
+
+Finally, a Unarian program consists of a library along with an expression, called the entry-point, to be evaluated in the context of that library. By default, the expression `main` is considered to be the entry-point, so any library that defines a `main` function is also a program.
 
 
 
@@ -80,11 +82,11 @@ Evaluating an expression containing a bracketed group can be done by treating th
 
 
 
-### Evaluation
+### Implementation
 
-When interpreting or compiling a Unarian program, an expression must be chosen as the entry-point. This entry-point defaults to `main`. Some implementations may allow the user to specify a custom expression as the entry-point, but this is not required. It is considered undefined behavior to have references to undefined functions or multiple definitions of the same function. However, it is recommended for implementations to treat both of these cases as compilation errors.
+To interpret or compile a Unarian program, an entry-point must be chosen. Some implementations may allow the user to specify a custom expression as the entry-point, but this is not required and should default to `main` if unspecified. It is considered undefined behavior to have references to undefined functions or multiple definitions of the same function. However, it is recommended for implementations to treat both of these cases as compilation errors.
 
-Finally, a compiled or interpreted program is evaluated by giving it a non-negative integer input. This input is evaluated on the entry-point expression as explained above, and the resulting output, either a non-negative integer or a failure, is returned. Input and output representations are left undefined, but it is recommended for integers to be represented in decimal and for failure to be represented by `-`. Bounds on integer inputs and outputs, as well as the behavior when these bounds are exceeded, are also left undefined, but it is recommended that implementations support integers up to at least $2^{63} - 1$ and produce a runtime error when exceeding their maximum value.
+A compiled or interpreted program is evaluated by giving it a non-negative integer input. This input is evaluated on the entry-point expression as explained above, and the resulting output, either a non-negative integer or a failure, is returned. Input and output representations are left undefined, but it is recommended for integers to be represented in decimal and for failure to be represented by `-`. Bounds on integer inputs and outputs, as well as the behavior when these bounds are exceeded, are also left undefined, but it is recommended that implementations support integers up to at least $2^{63} - 1$ and produce a runtime error when exceeding their maximum value.
 
 
 
