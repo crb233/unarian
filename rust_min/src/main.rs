@@ -13,10 +13,10 @@ type Value = Option<u64>;
 
 use std::slice::Iter;
 enum Frame<'a> {
-    NewAlternation(Iter<'a, Composition>),
-    Alternation(Iter<'a, Composition>, Value),
-    Composition(Iter<'a, Term>),
     Term(&'a Term),
+    Composition(Iter<'a, Term>),
+    Alternation(Iter<'a, Composition>),
+    AlternationBackup(Iter<'a, Composition>, Value),
 }
 
 fn tokenize(src: &str) -> impl Iterator<Item = &str> {
@@ -59,15 +59,15 @@ where Tokens: Iterator<Item = &'src str> {
 }
 
 fn evaluate(lib: &Library, alt: &Alternation, mut value: Value) -> Result<Value, &'static str> {
-    let mut stack = vec![Frame::NewAlternation(alt.iter())];
+    let mut stack = vec![Frame::Alternation(alt.iter())];
     while let Some(frame) = stack.pop() {
         match frame {
             Frame::Term(Term::Increment) => value = value.and_then(|x| x.checked_add(1)),
             Frame::Term(Term::Decrement) => value = value.and_then(|x| x.checked_sub(1)),
-            Frame::Term(Term::Group(alt)) => stack.push(Frame::NewAlternation(alt.iter())),
+            Frame::Term(Term::Group(alt)) => stack.push(Frame::Alternation(alt.iter())),
             Frame::Term(Term::Function(name)) => {
                 let alt = lib.get(name).ok_or("undefined function")?;
-                stack.push(Frame::NewAlternation(alt.iter()));
+                stack.push(Frame::Alternation(alt.iter()));
             }
             Frame::Composition(mut comp) => {
                 if let Some(term) = comp.next() {
@@ -75,18 +75,18 @@ fn evaluate(lib: &Library, alt: &Alternation, mut value: Value) -> Result<Value,
                     stack.push(Frame::Term(term));
                 }
             }
-            Frame::NewAlternation(alt) => {
-                stack.push(Frame::Alternation(alt, value));
+            Frame::Alternation(alt) => {
+                stack.push(Frame::AlternationBackup(alt, value));
                 value = None;
             }
-            Frame::Alternation(mut alt, backup @ Some(_)) => {
+            Frame::AlternationBackup(mut alt, backup @ Some(_)) => {
                 if let (Some(comp), None) = (alt.next(), value) {
-                    stack.push(Frame::Alternation(alt, backup));
+                    stack.push(Frame::AlternationBackup(alt, backup));
                     stack.push(Frame::Composition(comp.iter()));
                     value = backup;
                 }
             }
-            _ => {}
+            Frame::AlternationBackup(_, None) => {}
         }
     }
     Ok(value)
