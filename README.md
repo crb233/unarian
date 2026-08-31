@@ -24,6 +24,108 @@ Planned additions include:
 
 
 
+# Quickstart
+This is a comment. It starts with any `#` and continues to the end of the line.
+```
+# Comments are ignored
+```
+
+This is a function declaration. It consists of an identifier (the function name), an opening bracket `{`, an expression (the function definition), and a closing bracket `}`. Any extra whitespace between these tokens (including spaces, tabs, and newlines) is ignored.
+```
+function_name {
+	this_is_a
+	function
+	definition
+}
+```
+
+Identifiers can contain any characters except whitespace and `#`. The tokens `|`, `{`, and `}` are special keywords that cannot be identifiers. The identifiers `+`, `-`, `%`, `?`, `!`, and `@` represent atomic functions that cannot be redefined.
+```
+*10 { multiply_by_10 }
+/17 { divide_by_17 }
+^2 { square }
+```
+
+Expressions are evaluated from left to right on their input.
+```
+x_squared_plus_1 { ^2 + }
+x_plus_one_all_squared { + ^2 }
+```
+
+Functions can call themselves recursively.
+```
+infinite_loop { infinite_loop solve_p_vs_np }
+```
+
+There are two primary atomic functions: `+` and `-`. Applying `+` to input $x$ returns $x + 1$. Applying `-` to input $x$ returns $x - 1$ if $x > 0$ and fails if $x = 0$.
+```
+add_1 { + }
+add_2 { + + }
+add_5 { + + + + + }
+subtract_2_or_fail { - - }
+subtract_4_or_fail { - - - - }
+```
+
+There are four other atomic functions that may not included in every implementation of the language. Random `%` fails with probability $1/2$ and otherwise returns its input unchanged. Input `?` reads a single non-negative integer value from standard input and returns it. Output `!` prints its input to standard output and returns that value unchanged. Trace `@` prints the entire stack trace and returns its input unchanged.
+```
+fail_with_probability_1/4 { % % }
+add_1_then_print_then_add_2 { + ! + + }
+```
+
+Functions can have branching execution paths. The alternation operator `|` is used to separate alternate paths.
+```
+do_A_or_B_or_C { A | B | C }
+```
+
+If any branch fails (by attempting to decrement from zero), then skip the rest of the current branch and evalaute the next branch on the original input.
+```
+subtract_2_or_add_3 { - - | + + + }
+```
+
+Empty branches act like the identity function, returning their input unchanged.
+```
+subtract_4_or_do_nothing { - - - - | }
+subtract_up_to_3 { - - - | - - | - | }
+```
+
+A bracketed group starts with `{` and ends with `}`. Groups are evaluated as if their contents had been defined in a separate function.
+```
+complex {
+	a { b | c } d |
+	{ e | { f } } g
+}
+
+less_complex { a group_1 d | group_2 g }
+group_1 { b | c }
+group_2 { e | group3 }
+group_3 { f }
+```
+
+The `main` function is the default entry-point for a program. It's evaluated when we run this program.
+```
+main { get_nth_prime }
+```
+
+Here is a simple program that divides its input by 2 if even and otherwise multiplies by 3 and adds 1.
+```
+# Outputs 0.
+0 { - 0 | }
+
+# Outputs 0 if the input is 0, and fails otherwise.
+if=0 { { - 0 | + } - }
+
+# Divides by 2 if divisible by 2, and fails otherwise.
+if/2 { - - if/2 + | if=0 }
+
+# Multiplies by 3.
+*3 { - *3 + + + | }
+
+# Divides by 2 if even and otherwise multiplies by 3 and adds 1.
+main { if/2 | *3 + }
+```
+
+
+
 ## Language Specification
 
 ### Syntax
@@ -88,67 +190,3 @@ Evaluating an expression containing a bracketed group can be done by treating th
 To interpret or compile a Unarian program, an entry-point must be chosen. Some implementations may allow the user to specify a custom expression as the entry-point, but this is not required and should default to `main` if unspecified. It is considered undefined behavior to have references to undefined functions or multiple definitions of the same function. However, it is recommended for implementations to treat both of these cases as compilation errors.
 
 A compiled or interpreted program is evaluated by giving it a non-negative integer input. This input is evaluated on the entry-point expression as explained above, and the resulting output, either a non-negative integer or a failure, is returned. Input and output representations are left undefined, but it is recommended for integers to be represented in decimal and for failure to be represented by `-`. Bounds on integer inputs and outputs, as well as the behavior when these bounds are exceeded, are also left undefined, but it is recommended that implementations support integers up to at least $2^{63} - 1$ and produce a runtime error when exceeding their maximum value.
-
-
-
-### Learn by Example
-
-```
-# This is a comment.
-
-# This is a basic function definition.
-function_name { function_definition }
-
-# Extra spacing doesn't matter.
-example_func {
-    extra
-    spacing
-    doesn't
-    matter
-}
-
-# Function names can contain any characters except whitespace and '#'.
-# Tokens '{', '|', and '}' are special keywords and cannot be function names.
-# Tokens '+', '-', '?', '!', and '@' are built-in and cannot be redefined.
-*10 { multiply_by_10 }
-/10 { divide_by_10 }
-^2 { square }
-
-# Functions can call themselves recursively.
-infinite_loop { infinite_loop solve_p_vs_np }
-
-# There are two primary builtin functions: '+' and '-'.
-# Applying '+' to input x returns x + 1
-# Applying '-' to input x returns x - 1 if x > 0 and fails if x = 0
-add_1 { + }
-add_2 { + + }
-add_3 { + + + }
-subtract_2_or_fail { - - }
-
-# There are three builtin functions used for debugging: '?', '!', and '@'.
-# Applying '?' reads a value from standard input and returns it.
-# Applying '!' to input x prints x to standard input and returns x.
-# Applying '@' to input x prints the stack trace and returns x.
-print_then_add_1 { ! + }
-print_stack_trace { @ }
-
-# Functions can have branching execution paths. The special token '|', called
-# alternation, is used to separate alternate paths.
-do_A_or_B_or_C { A | B | C }
-
-# Empty alternates act as the identity function.
-subtract_2_or_do_nothing { - - | }
-
-# A bracketed group starts with '{' and ends with '}'. Such groups are
-# evaluated as if their contents had been defined in a separate function.
-complex { a { b | c } d | { e | { f } } g }
-
-code_1 { b | c }
-code_2 { f }
-code_3 { e | code_2 }
-less_complex { a code_1 d | code_3 g }   # This is equivalent to 'complex'.
-
-# The main function is the default entry-point for a program. It's evaluated
-# when we run this program.
-main { get_nth_prime }
-```
