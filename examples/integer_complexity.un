@@ -1,0 +1,231 @@
+# This file defines programs with the minimum number of tokens that produce a
+# certain output on input 0.
+# 
+# More specifically, given an integer n >= 0, let O_n be the set of all Unarian
+# programs that include a `main` function and terminate with output n on input
+# 0. Then let K(n) be the minimum among all programs P in O_n of |P| - 3, i.e.
+# the number of tokens of P minus three (to account for the 3 extra tokens
+# defining `main`).
+# 
+# Observe that K(n) is a left-inverse of the fast-growing function F(n) defined
+# in fast_growth.un, i.e. K(F(n)) = n for all n.
+# 
+# This file contains known upper-bounds of K(n) and the programs that achieve
+# those upper-bounds. The first few are easily seen to be tight. When there are
+# multiple programs that all achieve the same upper bound on number of tokens,
+# then the selected one is usually the "simplest" in some intuitive way. For
+# example, addition is intuitively simpler than multiplication, so it is
+# preferred.
+# 
+# This is related to Kolmogorov complexity. See the Wikipedia page for more
+# https://en.wikipedia.org/wiki/Kolmogorov_complexity. Specifically, since
+# Unarian is Turing complete and can produce any integer output on input 0, we
+# can think of K(n) as the Kolmogorov complexity of n in Unarian.
+# 
+# Note: This file contains repeated definitions for certain functions that are
+# reused in different lower bound programs. Therefore, it may not compile in
+# some implementations. However, every definition of a particular function
+# should be identical, so it's safe to remove the duplicates.
+
+# K(0) = 0
+main0 { }
+
+# K(1) = 1
+main1 { + }
+
+# K(2) = 2
+main2 { + + }
+
+# K(3) = 3
+main3 { + + + }
+
+# K(4) = 4
+main4 { + + + + }
+
+# K(5) = 5
+main5 { + + + + + }
+
+# K(6) = 6
+main6 { + + + + + + }
+
+# K(7) = 7
+main7 { + + + + + + + }
+
+# K(8) <= 8
+main8 { + + + + + + + + }
+
+# K(9) <= 9
+main9 { + + + + + + + + + }
+
+# K(10) <= 10
+main10 { + + + + + + + + + + }
+
+# K(11) <= 11
+main11 { + + + + + + + + + + + }
+
+# K(12) <= 10
+# Note: If F(10) = 12, then K(12) = 10 and K(n) > 10 for all n > 12.
++4 { + + + + }
+main12 { +4 +4 +4 }
+
+# K(13) <= 11
++4 { + + + + }
+main13 { +4 +4 +4 + }
+
+# K(14) <= 12
++4 { + + + + }
+main14 { +4 +4 +4 + + }
+
+# K(15) <= 11
++5 { + + + + + }
+main15 { +5 +5 +5 }
+
+# K(16) <= 11
+# Note: If F(11) = 16, then K(16) = 11 and K(n) > 11 for all n > 16.
++4 { + + + + }
+main16 { +4 +4 +4 +4 }
+
+# K(17) <= 12
++4 { + + + + }
+main17 { +4 +4 +4 +4 + }
+
+# K(18) <= 12
++6 { + + + + + + }
+main18 { +6 +6 +6 }
+
+# K(19) <= 13
++6 { + + + + + + }
+main19 { +6 +6 +6 + }
+
+# K(20) <= 12
+# Note: If F(12) = 20, then K(20) = 12 and K(n) > 12 for all n > 20.
++5 { + + + + + }
+main20 { +5 +5 +5 +5 }
+
+# K(21) <= 13
++5 { + + + + + }
+main21 { +5 +5 +5 +5 + }
+
+# K(22) <= 14
++5 { + + + + + }
+main22 { +5 +5 +5 +5 + + }
+
+# K(23) <= 14
++6 { + + + + + + }
+main23 { +6 +6 +6 +6 - }
+
+# K(24) <= 13
++6 { + + + + + + }
+main24 { +6 +6 +6 +6 }
+
+# K(25) <= 13
++5 { + + + + + }
+main25 { +5 +5 +5 +5 +5 }
+
+# K(26) <= 14
++5 { + + + + + }
+main26 { +5 +5 +5 +5 +5 + }
+
+# K(27) <= 13
+# Note: If F(13) = 27, then K(27) = 13 and K(n) > 13 for all n > 27.
+*3 { - *3 + + + | }
+main27 { + *3 *3 *3 }
+
+# K(28) <= 14
++7 { + + + + + + + }
+main28 { +7 +7 +7 +7 }
+
+# K(29) <= 15
++7 { + + + + + + + }
+main29 { +7 +7 +7 +7 + }
+
+# K(30) <= 14
++6 { + + + + + + }
+main30 { +6 +6 +6 +6 +6 }
+
+# K(31) <= 15
++6 { + + + + + + }
+main31 { +6 +6 +6 +6 +6 + }
+
+# K(32) <= 14
+*2 { - *2 + + | }
+main32 { + *2 *2 *2 *2 *2 }
+
+# K(33) <= 15
+*2 { - *2 + + | }
+main33 { + *2 *2 *2 *2 *2 + }
+
+# K(34) <= 15
+*2 { - *2 + + | }
+main34 { + *2 *2 *2 *2 + *2 }
+
+# K(35) <= 15
++7 { + + + + + + + }
+main35 { +7 +7 +7 +7 +7 }
+
+# K(36) <= 14
+*3 { - *3 + + + | }
+main36 { + *3 + *3 *3 }
+
+# K(37) <= 15
+*3 { - *3 + + + | }
+main37 { + *3 + *3 *3 + }
+
+# K(38) <= 16
+*2 { - *2 + + | }
+main38 { + *2 *2 *2 + *2 + *2 }
+
+# K(39) <= 16
+*2 { - *2 + + | }
+main39 { + *2 *2 + *2 *2 *2 - }
+
+# K(40) <= 15
+*2 { - *2 + + | }
+main40 { + *2 *2 + *2 *2 *2 }
+
+# K(41) <= 16
+*2 { - *2 + + | }
+main41 { + *2 *2 + *2 *2 *2 + }
+
+# K(42) <= 16
++7 { + + + + + + + }
+main42 { +7 +7 +7 +7 +7 +7 }
+
+# K(43) <= 17
+*2 { - *2 + + | }
+main43 { + *2 *2 + *2 *2 + *2 + }
+
+# K(44) <= 16
+*2 { - *2 + + | }
+main44 { + *2 *2 + *2 + *2 *2 }
+
+# K(45) <= 17
++9 { + + + + + + + + + }
+main45 { +9 +9 +9 +9 +9 }
+
+# K(46) <= 16
+*2 { - *2 + + | }
+main46 { + *2 + *2 *2 *2 - *2 }
+
+# K(47) <= 16
+*2 { - *2 + + | }
+main47 { + *2 + *2 *2 *2 *2 - }
+
+# K(48) <= 15
+*2 { - *2 + + | }
+main48 { + *2 + *2 *2 *2 *2 }
+
+# K(49) <= 16
+*2 { - *2 + + | }
+main49 { + *2 + *2 *2 *2 *2 + }
+
+# K(50) <= 16
+*2 { - *2 + + | }
+main50 { + *2 + *2 *2 *2 + *2 }
+
+# ...
+
+# K(81) <= 14
+# Note: If F(14) = 81, then K(81) = 14 and K(n) > 14 for all n > 81.
+*3 { - *3 + + + | }
+main81 { + *3 *3 *3 *3 }

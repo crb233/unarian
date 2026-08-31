@@ -1,0 +1,102 @@
+# This Unarian program takes input n and computes n^2.
+# 
+# While this would be a simple task in common programming languages, it's much
+# more difficult in Unarian, since there's only one accessible integer at any
+# point in the execution of the program. As far as I can tell, computing
+# squares requires being able to store multiple integers in memory. This means
+# that it's necessary to design functions for encode and decoding values from
+# 'virtual' integers (also called registers) stored in a single integer. Most
+# of the complexity of this program comes from these functions.
+# 
+# The strategy for storing virtual integers is to interlace the bits of two
+# integers together. For example, we can store 0b101 and 0b10110 by: spacing
+# out their bits: 0b1_0_1 and 0b1_0_1_1_0; shifting one of them up: 0b1_0_1_
+# and 0b1_0_1_1_0; bitwise combining the results together: 0b1_0110110; and
+# filling the gaps 0b100110110. It's not hard to see that this process is
+# reversible and can be used to retrieve any one of the stored integers.
+
+#==================#
+# Basic Operations #
+#==================#
+
+# Outputs 0.
+0 { - 0 | }
+
+# Continues if input is 0. Fails otherwise.
+if=0 { { - 0 | + } - }
+
+# Continues if input is not 0. Fails otherwise.
+if>0 { - + }
+
+
+
+#============#
+# Arithmetic #
+#============#
+
+# Adds 4.
++4 { + + + + }
+
+# Subtracts 4.
+-4 { - - - - }
+
+# Multiplies by 4.
+<< { - << +4 | }
+
+# Divides by 4 (floored division).
+>> { -4 >> + | 0 }
+
+# Adds to least significant digits
++00 { }
++01 { + }
++10 { + + }
++11 { + + + }
+
+# Subtracts from least significant digits
+-00 { }
+-01 { - }
+-10 { - - }
+-11 { - - - }
+
+# Checks least significant digits
+if=00mod4 { -4 if=00mod4 +4 | if=0 }
+if=01mod4 { -01 if=00mod4 +01 }
+if=10mod4 { -10 if=00mod4 +10 }
+if=11mod4 { -11 if=00mod4 +11 }
+
+
+
+#=====================#
+# Register Operations #
+#=====================#
+
+# Increment register A/B
+A++ { if=10mod4 >> A++ << +00 | if=11mod4 >> A++ << +01 | +10 }
+B++ { if=01mod4 >> B++ << +00 | if=11mod4 >> B++ << +10 | +01 }
+
+# Decrement register A/B
+A-- { if>0 if=00mod4 >> A-- << +10 | if=01mod4 >> A-- << +11 | if=10mod4 -10 | if=11mod4 -10 }
+B-- { if>0 if=00mod4 >> B-- << +01 | if=10mod4 >> B-- << +11 | if=01mod4 -01 | if=11mod4 -01 }
+
+# Set register A/B to current value
+setA { - setA A++ | 0 }
+setB { - setB B++ | 0 }
+
+# Get value of register A/B
+getA { A-- getA + | 0 }
+getB { B-- getB + | 0 }
+
+
+
+#==========#
+# Squaring #
+#==========#
+
+A+=2B { B-- A++ A++ A+=2B B++ | }
+
+A+=B^2 { B-- A++ A+=2B A+=B^2 | }
+
+square { setB A+=B^2 getA }
+
+main { square }
+

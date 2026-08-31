@@ -1,4 +1,5 @@
-# This program defines fast-growing functions within token constraints.
+# This file defines programs with a certain number of tokens that produce the
+# maximum possible output on input 0.
 # 
 # More specifically, given an integer n >= 0, let U_n be the set of all Unarian
 # programs that include a `main` function and can be written with at most n + 3
@@ -6,7 +7,7 @@
 # maximum among all terminating programs in U_n of the value produced by that
 # program on input 0.
 # 
-# This program contains known lower-bounds of F(n) and the programs that achieve
+# This file contains known lower-bounds of F(n) and the programs that achieve
 # those lower-bounds. The first few are easily seen to be tight. They are also
 # categorized into 'regimes' based on the construction method used. For example,
 # the multiplication regime contains the first functions that multiply their
@@ -81,10 +82,10 @@ main10 { +3 +3 +3 +3 }
 +4 { + + + + }
 main11 { +4 +4 +4 +4 }
 
-# F(12) >= 4 + 4 + 4 + 4 + 4
+# F(12) >= 5 + 5 + 5 + 5
 #        = 20
-+4 { + + + + }
-main12 { +4 +4 +4 +4 +4 }
++5 { + + + + + }
+main12 { +5 +5 +5 +5 }
 
 #=======================#
 # Multiplication Regime #
