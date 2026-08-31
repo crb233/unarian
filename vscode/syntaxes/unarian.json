@@ -27,7 +27,7 @@
 			"match": "(?<!\\S)[-+?!@|}](?!\\S)"
 		},
 		"function": {
-			"name": "variable.function",
+			"name": "entity.name.function",
 			"match": "(?<!\\S)(\\S{2,}|[^-+?!@{|}])(?!\\S)"
 		},
 		"definition": {
@@ -75,7 +75,7 @@
 			"match": "(?<!\\S)[-+?!@](?!\\S)"
 		},
 		"identifier": {
-			"name": "entity.name.function",
+			"name": "variable.parameter",
 			"match": "(?<!\\S)(\\S{2,}|[^-+?!@{|}])(?!\\S)"
 		},
 		"alternation": {

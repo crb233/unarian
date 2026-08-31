@@ -8,5 +8,5 @@ This package will automatically apply to files with extensions `.un` or `.unaria
 ## Installing
 
 1. Clone this repository.
-1. Navigate to this directory.
-1. In a terminal, enter `code --install-extension unarian-0.1.0.vsix`
+2. Navigate to this directory.
+3. In a terminal, enter `code --install-extension unarian-0.1.3.vsix`
