@@ -9,16 +9,16 @@ See also the [Esolangs page](https://esolangs.org/wiki/Unarian) for this languag
 
 ## This Repository
 This repository contains:
-- [a short language specification](#language-specification),
+- [an informal language specification](#language-specification),
 - [several interesting example programs](./examples),
 - [a simple VS Code extension](./vscode),
+- [an involved Rust interpreter](./rust)
 - [a minimalistic Rust interpreter](./rust_min),
 - [an involved Python interpreter](./python),
 - and a [minimalistic Python interpreter](./python_min).
 
 Planned additions include:
-- a minimalistic C interpreter,
-- and a fully-featured Rust interpreter including a custom bytecode format.
+- a minimalistic C interpreter.
 
 
 
