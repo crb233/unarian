@@ -1,5 +1,5 @@
 # Unarian
-Unarian (pronounced _yoo-NAIR-eein_) is an [esoteric programming language](https://en.wikipedia.org/wiki/Esoteric_programming_language) based on the concept that every Unarian function computes a partial unary function over the natural numbers (hence the name Unarian) and that these functions can only be constructed as combinations of existing functions.
+Unarian (pronounced *yoo-NAIR-eein*) is an [esoteric programming language](https://en.wikipedia.org/wiki/Esoteric_programming_language) based on the concept that every expression computes a partial unary function over the natural numbers (hence the name Unarian) and these functions can only be constructed as simple combinations of existing functions.
 
 The beauty of this language is in its simplicity. There are only two built-in functions: increment and decrement; only two ways to combine existing functions into new ones: composition and alternation; and effectively only one integer that can be accessed by running programs. Despite this simplicity, Unarian is Turing-complete and capable of representing arbitrary computable functions.
 
@@ -12,7 +12,7 @@ This repository contains:
 - [an informal language specification](#language-specification),
 - [several interesting example programs](./examples),
 - [a simple VS Code extension](./vscode),
-- [an involved Rust interpreter](./rust)
+- [an involved Rust interpreter](./rust) still in progress,
 - [a minimalistic Rust interpreter](./rust_min),
 - [an involved Python interpreter](./python),
 - and a [minimalistic Python interpreter](./python_min).
