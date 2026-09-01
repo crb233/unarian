@@ -133,31 +133,60 @@ impl<'src> Token<'src> {
 /// TODO
 #[derive(Debug, Clone)]
 pub struct TokenStream<'src> {
-    token: Option<Token<'src>>,
     reader: Reader<'src>,
-    next_reader: Reader<'src>,
+    token: Option<Token<'src>>,
 }
 
 impl<'src> TokenStream<'src> {
     /// TODO
     #[must_use]
-    fn from_pos(reader: Reader<'src>) -> Self {
+    fn from_reader(reader: Reader<'src>) -> Self {
+        let pos = reader.position().clone();
         TokenStream {
-            token: Some(Token::at_position(TokenKind::Start, reader.position().clone())),
-            reader: reader.clone(),
-            next_reader: reader,
+            reader: reader,
+            token: Some(Token::at_position(TokenKind::Start, pos)),
         }
     }
     
     /// TODO
     #[must_use]
     fn from_source(source: &'src Source) -> Self {
-        TokenStream::from_pos(Reader::new(source))
+        TokenStream::from_reader(Reader::new(source))
     }
     
     /// TODO
     fn peek(&self) -> &Option<Token<'src>> {
         &self.token
+    }
+    
+    /// TODO
+    fn next_token(&mut self) -> Option<Token<'src>> {
+        // no more tokens after end of input
+        if self.token.is_none() || self.token.as_ref().is_some_and(|t| t.kind == TokenKind::End) {
+            return None;
+        }
+        
+        // skip whitespace
+        self.reader.skip_while(&|c: char| c.is_whitespace());
+        
+        // check for end of input
+        if self.reader.is_at_end() {
+            let span = Span::from_position(self.reader.position().clone());
+            return Some(Token::new(TokenKind::End, span));
+        }
+        
+        // check for a comment
+        if self.reader.starts_with(STRING_COMMENT_START) {
+            let span = self.reader.read_until_after(STRING_COMMENT_STOP);
+            return Some(Token::new(TokenKind::Comment, span));
+        }
+        
+        // must be an identifier
+        let span = self.reader.read_until(&|c: char| {
+            // TODO this isn't portable / compatible with STRING_COMMENT_START
+            c.is_whitespace() || c == '#'
+        });
+        return Some(Token::new(TokenKind::from_span(&span), span))
     }
 }
 
@@ -165,77 +194,8 @@ impl<'src> Iterator for TokenStream<'src> {
     type Item = Token<'src>;
     
     fn next(&mut self) -> Option<Self::Item> {
-        // No more tokens after end of input
-        if self.token.is_none() || self.token.as_ref().is_some_and(|t| t.kind == TokenKind::End) {
-            self.token = None;
-            return None;
-        }
-        
-        // update last pos before updating pos
-        self.reader = self.next_reader.clone();
-        
-        // skip whitespace
-        self.next_reader.skip_while(&pattern::Whitespace);
-        
-        // check for end of input
-        todo!();
-        
-        // check for a comment
-        if self.next_reader.starts_with(STRING_COMMENT_START) {
-            let span = self.next_reader.read_until_after(STRING_COMMENT_STOP);
-            return Some(Token::new(TokenKind::Comment, span));
-        }
-        
-        // read the identifier
-        todo!();
-        
-        // // skip whitespace
-        // self.next_position.consume_match(&*REGEX_WHITESPACE);
-        // // while self.pos.peek().is_some_and(|c| c.is_ascii_whitespace()) {
-        // //     self.pos.next();
-        // // }
-        // 
-        // // try parsing the next token
-        // let new_next_token = if let Some(span) = self.next_position.consume_match(&*REGEX_COMMENT) {
-        //     Some(Token::new(TokenKind::Comment, span))
-        // } else if let Some(span) = self.next_position.consume_match(&*REGEX_IDENTIFIER) {
-        //     Some(Token::from_span(span))
-        // } else {
-        //     None
-        // };
-        
-        
-        
-        // let new_next_token = if let Some(first) = self.pos.peek() {
-        //     let start = self.pos.clone();
-        //     if *first == CHAR_COMMENT_START {
-        //         // parse a comment
-        //         while self.pos.peek().is_some_and(|c| c!= CHAR_COMMENT_STOP) {
-        //             self.pos.next();
-        //         }
-        //     } else {
-        //         // parse a regular token
-        //         while self.pos.peek().is_some_and(|c| !c.is_ascii_whitespace() && c != CHAR_COMMENT_START) {
-        //             self.pos.next();
-        //         }
-        //     }
-        //
-        //     // update the next token
-        //     if start != self.pos {
-        //         Some(Token::from_span(Span::new(start, self.pos.clone())))
-        //     } else {
-        //         None
-        //     }
-        //
-        // } else {
-        //     None
-        // };
-        
-        
-        
-        // // return the current token, and replace it with the next one
-        // std::mem::replace(&mut self.token, new_next_token)
-        todo!()
+        let next_token = self.next_token();
+        std::mem::replace(&mut self.token, next_token)
     }
 }
 

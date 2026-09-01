@@ -529,44 +529,50 @@ impl<'src> Reader<'src> {
     }
     
     /// TODO
-    pub fn starts_with<P: Pattern + ?Sized>(&mut self, pattern: &P) -> bool {
+    pub fn starts_with<P: Pattern>(&mut self, pattern: P) -> bool {
         pattern.prefix_length_of(self.remainder()).is_some()
     }
     
     /// TODO
-    pub fn skip_once<P: Pattern + ?Sized>(&mut self, pattern: &P) {
+    pub fn skip_once<P: Pattern>(&mut self, pattern: P) {
         if let Some(n) = pattern.prefix_length_of(self.remainder()) {
             self.move_forward(n);
         }
     }
     
     /// TODO
-    pub fn skip_while<P: Pattern + ?Sized>(&mut self, pattern: &P) {
+    pub fn skip_while<P: Pattern + Copy>(&mut self, pattern: P) {
         while let Some(n) = pattern.prefix_length_of(self.remainder()) {
             self.move_forward(n);
         }
     }
     
     /// TODO
-    pub fn skip_until<P: Pattern + ?Sized>(&mut self, pattern: &P) {
+    pub fn skip_until<P: Pattern + Copy>(&mut self, pattern: P) {
         while pattern.prefix_length_of(self.remainder()).is_none() {
-            self.next();
+            if self.next().is_none() {
+                break;
+            }
         }
     }
     
     /// TODO
-    pub fn skip_until_after<P: Pattern + ?Sized>(&mut self, pattern: &P) {
+    /// 
+    /// TODO should this fail if we don't eventually match the pattern?
+    pub fn skip_until_after<P: Pattern + Copy>(&mut self, pattern: P) {
         loop {
             if let Some(n) = pattern.prefix_length_of(self.remainder()) {
                 self.move_forward(n);
-                return;
+                break;
             }
-            self.next();
+            if self.next().is_none() {
+                break;
+            }
         }
     }
     
     /// TODO
-    pub fn read_once<P: Pattern + ?Sized>(&mut self, pattern: &P) -> Option<Span<'src>> {
+    pub fn read_once<P: Pattern>(&mut self, pattern: P) -> Option<Span<'src>> {
         if let Some(n) = pattern.prefix_length_of(self.remainder()) {
             let start = self.pos.clone();
             self.move_forward(n);
@@ -576,7 +582,7 @@ impl<'src> Reader<'src> {
     }
     
     /// TODO
-    pub fn read_while<P: Pattern + ?Sized>(&mut self, pattern: &P) -> Vec<Span<'src>> {
+    pub fn read_while<P: Pattern>(&mut self, pattern: P) -> Vec<Span<'src>> {
         let mut matches = Vec::new();
         if let Some(n) = pattern.prefix_length_of(self.remainder()) {
             let start = self.pos.clone();
@@ -587,23 +593,18 @@ impl<'src> Reader<'src> {
     }
     
     /// TODO
-    pub fn read_until<P: Pattern + ?Sized>(&mut self, pattern: &P) -> Span<'src> {
+    pub fn read_until<P: Pattern + Copy>(&mut self, pattern: P) -> Span<'src> {
         let start = self.pos.clone();
-        while pattern.prefix_length_of(self.remainder()).is_none() {
-            self.next();
-        }
+        self.skip_until(pattern);
         Span::new(start, self.pos.clone())
     }
     
     /// TODO
-    pub fn read_until_after<P: Pattern + ?Sized>(&mut self, pattern: &P) -> Span<'src> {
+    /// 
+    /// TODO should this fail if we don't eventually match the pattern?
+    pub fn read_until_after<P: Pattern + Copy>(&mut self, pattern: P) -> Span<'src> {
         let start = self.pos.clone();
-        loop {
-            if let Some(n) = pattern.prefix_length_of(self.remainder()) {
-                self.move_forward(n);
-                return Span::new(start, self.pos.clone());
-            }
-            self.next();
-        }
+        self.skip_until_after(pattern);
+        Span::new(start, self.pos.clone())
     }
 }

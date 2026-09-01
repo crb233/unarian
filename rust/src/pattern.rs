@@ -23,23 +23,26 @@ pub unsafe trait Pattern {
     ///
     /// Note: This function returns indices into a string, so implementors must
     /// be careful to only return valid indices.
-    fn prefix_length_of(&self, haystack: &str) -> Option<usize>;
+    fn prefix_length_of(self, haystack: &str) -> Option<usize>
+    where Self: Sized;
     
     /// TODO
-    fn matches_start(&self, target: &str) -> bool {
+    fn matches_start(self, target: &str) -> bool
+    where Self: Sized {
         self.prefix_length_of(target).is_some()
     }
     
     /// TODO
-    fn matches(&self, target: &str) -> bool {
+    fn matches(self, target: &str) -> bool
+    where Self: Sized {
         self.prefix_length_of(target).is_some_and(|n| n == target.len())
     }
 }
 
 unsafe impl Pattern for char {
-    fn prefix_length_of(&self, haystack: &str) -> Option<usize> {
+    fn prefix_length_of(self, haystack: &str) -> Option<usize> {
         match haystack.chars().next() {
-            Some(c) if &c == self => Some(c.len_utf8()),
+            Some(c) if c == self => Some(c.len_utf8()),
             _ => None,
         }
     }
@@ -47,7 +50,7 @@ unsafe impl Pattern for char {
 
 unsafe impl<F> Pattern for F
 where F: Fn(char) -> bool {
-    fn prefix_length_of(&self, haystack: &str) -> Option<usize> {
+    fn prefix_length_of(self, haystack: &str) -> Option<usize> {
         match haystack.chars().next() {
             Some(c) if self(c) => Some(c.len_utf8()),
             _ => None,
@@ -55,8 +58,18 @@ where F: Fn(char) -> bool {
     }
 }
 
-unsafe impl Pattern for str {
-    fn prefix_length_of(&self, haystack: &str) -> Option<usize> {
+// unsafe impl<F> Pattern for &mut F
+// where F: FnMut(char) -> bool {
+//     fn prefix_length_of(self, haystack: &str) -> Option<usize> {
+//         match haystack.chars().next() {
+//             Some(c) if self(c) => Some(c.len_utf8()),
+//             _ => None,
+//         }
+//     }
+// }
+
+unsafe impl Pattern for &str {
+    fn prefix_length_of(self, haystack: &str) -> Option<usize> {
         if haystack.is_char_boundary(self.len()) && &haystack[0 .. self.len()] == self {
             Some(self.len())
         } else {
@@ -65,47 +78,47 @@ unsafe impl Pattern for str {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct Whitespace;
-
-unsafe impl Pattern for Whitespace {
-    fn prefix_length_of(&self, haystack: &str) -> Option<usize> {
-        match haystack.chars().next() {
-            Some(c) if c.is_whitespace() => Some(c.len_utf8()),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct Any<'a>(&'a [&'a (dyn Pattern + 'a)]);
-
-unsafe impl<'a> Pattern for Any<'a> {
-    fn prefix_length_of(&self, haystack: &str) -> Option<usize> {
-        for &pattern in self.0 {
-            let result = pattern.prefix_length_of(haystack);
-            if result.is_some() {
-                return result;
-            }
-        }
-        None
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct Sequence<'a>(&'a [&'a (dyn Pattern + 'a)]);
-
-unsafe impl<'a> Pattern for Sequence<'a> {
-    fn prefix_length_of(&self, mut haystack: &str) -> Option<usize> {
-        let mut total: usize = 0;
-        for &pattern in self.0 {
-            if let Some(n) = pattern.prefix_length_of(haystack) {
-                total += n;
-                haystack = &haystack[n ..];
-            } else {
-                return None
-            }
-        }
-        Some(total)
-    }
-}
+// #[derive(Debug, Clone, Copy)]
+// pub struct Whitespace;
+// 
+// unsafe impl Pattern for Whitespace {
+//     fn prefix_length_of(self, haystack: &str) -> Option<usize> {
+//         match haystack.chars().next() {
+//             Some(c) if c.is_whitespace() => Some(c.len_utf8()),
+//             _ => None,
+//         }
+//     }
+// }
+// 
+// #[derive(Clone, Copy)]
+// pub struct Any<'a>(pub &'a [Box<dyn Pattern + 'a>]);
+// 
+// unsafe impl<'a> Pattern for Any<'a> {
+//     fn prefix_length_of(self, haystack: &str) -> Option<usize> {
+//         for &pattern in self.0 {
+//             let result = pattern.prefix_length_of(haystack);
+//             if result.is_some() {
+//                 return result;
+//             }
+//         }
+//         None
+//     }
+// }
+// 
+// #[derive(Clone, Copy)]
+// pub struct Sequence<'a>(&'a [&'a (dyn Pattern + 'a)]);
+// 
+// unsafe impl<'a> Pattern for Sequence<'a> {
+//     fn prefix_length_of(&self, mut haystack: &str) -> Option<usize> {
+//         let mut total: usize = 0;
+//         for &pattern in self.0 {
+//             if let Some(n) = pattern.prefix_length_of(haystack) {
+//                 total += n;
+//                 haystack = &haystack[n ..];
+//             } else {
+//                 return None
+//             }
+//         }
+//         Some(total)
+//     }
+// }
