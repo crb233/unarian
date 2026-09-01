@@ -3,9 +3,21 @@
 mod source;
 mod tokens;
 mod syntax;
+mod pattern;
+
+trait X {
+    
+}
+
+impl X for &str {}
+
+impl X for i64 {}
 
 fn main() {
     println!("Hello, world!");
+    let a: &str = "hello";
+    let b: i64 = -13248;
+    let z: [&dyn X; 2] = [&a, &b];
 }
 
 

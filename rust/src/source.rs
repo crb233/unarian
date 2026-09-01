@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter};
 use std::path::Path;
 use std::str::Chars;
 
-// use regex::Regex;
+use crate::pattern::Pattern;
 
 
 
@@ -101,6 +101,12 @@ impl<'s> Source<'s> {
         let name = path.as_ref().to_string_lossy().into_owned();
         let text = std::fs::read_to_string(path)?;
         Ok(Source::new(name, text))
+    }
+    
+    /// TODO
+    unsafe fn get_slice(&self, start: usize, end: usize) -> &str {
+        let text: &str = self.text.borrow();
+        &text[start .. end]
     }
 }
 
@@ -450,7 +456,7 @@ impl<'src> Display for Span<'src> {
 /// TODO
 #[derive(Debug, Clone)]
 pub struct Reader<'src> {
-    /// The Source text to read.
+    /// The source text to read.
     src: &'src Source<'src>,
     
     /// Peekable character iterator to read from.
@@ -461,13 +467,18 @@ pub struct Reader<'src> {
 }
 
 impl<'src> Reader<'src> {
-    /// Creates a new Reader at the start of the source
-    pub fn new(&mut self, src: &'src Source<'src>) -> Self {
+    /// Creates a new Reader at the start of the source.
+    pub fn new(src: &'src Source<'src>) -> Self {
         Reader {
             src,
-            chars: self.src.text.chars().into_peekable(),
+            chars: src.text.chars().into_peekable(),
             pos: Position::new(&src),
         }
+    }
+    
+    /// Returns the current position of this Reader.
+    pub fn position(&self) -> &Position<'src> {
+        &self.pos
     }
     
     /// Move back to the start of the source.
@@ -476,17 +487,15 @@ impl<'src> Reader<'src> {
         self.pos.move_to_start();
     }
     
-    // /// Scans in linear time from either the current position or the start to
-    // /// the byte index given by `char_byte`. If this value doesn't match the
-    // /// start of a valid unicode character, then this method will overshoot.
-    // pub fn move_upto_byte(&mut self, char_byte: usize) {
-    //     if char_byte < self.char_byte {
-    //         self.move_to_start();
-    //     }
-    //     while self.char_byte < char_byte {
-    //         self.next();
-    //     }
-    // }
+    /// Moves forward the specified number of bytes. The resulting position must
+    /// be on a valid character boundary.
+    fn move_forward(&mut self, bytes: usize) {
+        let char_byte = self.pos.char_byte + bytes;
+        // assert!(self.src.text.is_char_boundary(char_byte));
+        while self.pos.char_byte < char_byte {
+            self.next();
+        }
+    }
     
     /// Returns the character at the current position if it exists.
     pub fn peek(&self) -> &Option<char> {
@@ -504,54 +513,97 @@ impl<'src> Reader<'src> {
         }
     }
     
-    // /// Checks if the current position matches the given regex. The current
-    // /// position is not affected. Returns `Some(span)` if there's a match and
-    // /// `None` otherwise.
-    // pub fn check_match(&self, regex: &Regex) -> Option<Span<'src>> {
-    //     if let Some(m) = regex.find_at(self.src.text.borrow(), self.char_byte) {
-    //         if m.start() == self.char_byte {
-    //             let mut end = self.clone();
-    //             end.move_upto_byte(m.end());
-    //             return Some(Span::new(self.clone(), end));
-    //         }
-    //     }
-    //     None
-    // }
-    // 
-    // /// Checks if the current position matches the given regex, and moves it to
-    // /// the end of the match if so. Returns `Some(span)` if there's a match and
-    // /// `None` otherwise.
-    // pub fn consume_match(&mut self, regex: &Regex) -> Option<Span<'src>> {
-    //     if let Some(m) = regex.find_at(self.src.text.borrow(), self.char_byte) {
-    //         if m.start() == self.char_byte {
-    //             let start = self.clone();
-    //             self.move_upto_byte(m.end());
-    //             return Some(Span::new(start, self.clone()));
-    //         }
-    //     }
-    //     None
-    // }
-    // 
-    // /// Finds the next position that matches the given regex and, if a match
-    // /// exists, moves the current position there. Returns `Some(span)` for the
-    // /// skipped characters if there's a match and `None` otherwise.
-    // pub fn consume_until_match(&mut self, regex: &Regex) -> Option<Span<'src>> {
-    //     if let Some(m) = regex.find_at(self.src.text.borrow(), self.char_byte) {
-    //         let start = self.clone();
-    //         self.move_upto_byte(m.start());
-    //         return Some(Span::new(start, self.clone()));
-    //     }
-    //     None
-    // }
-    // 
-    // /// As long as the current position matches the given regex, collect the
-    // /// match, move the current position, and try again. Returns a `Vec`
-    // /// containing all of the matches.
-    // pub fn consume_while_match(&mut self, regex: &Regex) -> Vec<Span<'src>> {
-    //     let mut matches = Vec::new();
-    //     while let Some(s) = self.consume_match(regex) {
-    //         matches.push(s);
-    //     }
-    //     matches
-    // }
+    /// TODO
+    pub fn is_at_start(&self) -> bool {
+        self.pos.char_byte == 0
+    }
+    
+    /// TODO
+    pub fn is_at_end(&self) -> bool {
+        self.peek().is_none()
+    }
+    
+    /// TODO
+    fn remainder(&self) -> &'src str {
+        unsafe { self.src.get_slice(0, self.pos.char_byte) }
+    }
+    
+    /// TODO
+    pub fn starts_with<P: Pattern + ?Sized>(&mut self, pattern: &P) -> bool {
+        pattern.prefix_length_of(self.remainder()).is_some()
+    }
+    
+    /// TODO
+    pub fn skip_once<P: Pattern + ?Sized>(&mut self, pattern: &P) {
+        if let Some(n) = pattern.prefix_length_of(self.remainder()) {
+            self.move_forward(n);
+        }
+    }
+    
+    /// TODO
+    pub fn skip_while<P: Pattern + ?Sized>(&mut self, pattern: &P) {
+        while let Some(n) = pattern.prefix_length_of(self.remainder()) {
+            self.move_forward(n);
+        }
+    }
+    
+    /// TODO
+    pub fn skip_until<P: Pattern + ?Sized>(&mut self, pattern: &P) {
+        while pattern.prefix_length_of(self.remainder()).is_none() {
+            self.next();
+        }
+    }
+    
+    /// TODO
+    pub fn skip_until_after<P: Pattern + ?Sized>(&mut self, pattern: &P) {
+        loop {
+            if let Some(n) = pattern.prefix_length_of(self.remainder()) {
+                self.move_forward(n);
+                return;
+            }
+            self.next();
+        }
+    }
+    
+    /// TODO
+    pub fn read_once<P: Pattern + ?Sized>(&mut self, pattern: &P) -> Option<Span<'src>> {
+        if let Some(n) = pattern.prefix_length_of(self.remainder()) {
+            let start = self.pos.clone();
+            self.move_forward(n);
+            return Some(Span::new(start, self.pos.clone()));
+        }
+        None
+    }
+    
+    /// TODO
+    pub fn read_while<P: Pattern + ?Sized>(&mut self, pattern: &P) -> Vec<Span<'src>> {
+        let mut matches = Vec::new();
+        if let Some(n) = pattern.prefix_length_of(self.remainder()) {
+            let start = self.pos.clone();
+            self.move_forward(n);
+            matches.push(Span::new(start, self.pos.clone()));
+        }
+        matches
+    }
+    
+    /// TODO
+    pub fn read_until<P: Pattern + ?Sized>(&mut self, pattern: &P) -> Span<'src> {
+        let start = self.pos.clone();
+        while pattern.prefix_length_of(self.remainder()).is_none() {
+            self.next();
+        }
+        Span::new(start, self.pos.clone())
+    }
+    
+    /// TODO
+    pub fn read_until_after<P: Pattern + ?Sized>(&mut self, pattern: &P) -> Span<'src> {
+        let start = self.pos.clone();
+        loop {
+            if let Some(n) = pattern.prefix_length_of(self.remainder()) {
+                self.move_forward(n);
+                return Span::new(start, self.pos.clone());
+            }
+            self.next();
+        }
+    }
 }

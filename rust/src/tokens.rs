@@ -1,7 +1,6 @@
-use crate::source::{Source, Position, Span, Reader};
-
-// use lazy_static::lazy_static;
-// use regex::Regex;
+use crate::source::{Position, Reader, Source, Span};
+use crate::pattern;
+use crate::pattern::Pattern;
 
 
 
@@ -9,14 +8,17 @@ use crate::source::{Source, Position, Span, Reader};
 // Constants and Utilities //
 //=========================//
 
-/// Whitespace characters
-pub const CHARS_WHITESPACE     : &str = " \t\n\r";
-
 /// Comment start string
 pub const CHAR_COMMENT_START   : char = '#';
 
 /// Comment stop string
 pub const CHAR_COMMENT_STOP    : char = '\n';
+
+/// Comment start string
+pub const STRING_COMMENT_START : &str = "#";
+
+/// Comment stop string
+pub const STRING_COMMENT_STOP  : &str = "\n";
 
 /// Open bracketed group string
 pub const STRING_OPEN_BRACE    : &str = "{";
@@ -33,14 +35,17 @@ pub const STRING_INCREMENT     : &str = "+";
 /// Decrement string
 pub const STRING_DECREMENT     : &str = "-";
 
-// lazy_static!{
-//     static ref REGEX_WHITESPACE : Regex = Regex::new(r"\s+").unwrap();
-//     static ref REGEX_COMMENT    : Regex = Regex::new(r"#.*$").unwrap();
-//     static ref REGEX_IDENTIFIER : Regex = Regex::new(r"[^\s#]+").unwrap();
-//     // static ref REGEX_COMMENT_START : Regex = Regex::new(r"#").unwrap();
-//     // static ref REGEX_COMMENT_STOP  : Regex = Regex::new(r"\n").unwrap();
-// }
+/// Decrement string
+pub const STRING_RANDOM        : &str = "%";
 
+/// Decrement string
+pub const STRING_INPUT         : &str = "?";
+
+/// Decrement string
+pub const STRING_OUTPUT        : &str = "!";
+
+/// Decrement string
+pub const STRING_TRACE         : &str = "@";
 
 
 
@@ -48,17 +53,28 @@ pub const STRING_DECREMENT     : &str = "-";
 // Tokens //
 //========//
 
+/// TODO
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AtomicKind {
+    Increment,
+    Decrement,
+    Random,
+    Input,
+    Output,
+    Trace,
+}
+
+/// TODO
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
-    FileStart,
-    FileStop,
+    Start,
+    End,
     Comment,
     OpenBrace,
     CloseBrace,
     Alternation,
-    Increment,
-    Decrement,
-    Identifier,
+    Compound,
+    Atomic(AtomicKind),
 }
 
 impl TokenKind {
@@ -67,19 +83,24 @@ impl TokenKind {
             STRING_OPEN_BRACE  => TokenKind::OpenBrace,
             STRING_CLOSE_BRACE => TokenKind::CloseBrace,
             STRING_ALTERNATION => TokenKind::Alternation,
-            STRING_INCREMENT   => TokenKind::Increment,
-            STRING_DECREMENT   => TokenKind::Decrement,
+            STRING_INCREMENT   => TokenKind::Atomic(AtomicKind::Increment),
+            STRING_DECREMENT   => TokenKind::Atomic(AtomicKind::Decrement),
+            STRING_RANDOM      => TokenKind::Atomic(AtomicKind::Random),
+            STRING_INPUT       => TokenKind::Atomic(AtomicKind::Input),
+            STRING_OUTPUT      => TokenKind::Atomic(AtomicKind::Output),
+            STRING_TRACE       => TokenKind::Atomic(AtomicKind::Trace),
             string => {
-                if string.starts_with(CHAR_COMMENT_START) {
+                if STRING_COMMENT_START.matches_start(string) {
                     TokenKind::Comment
                 } else {
-                    TokenKind::Identifier
+                    TokenKind::Compound
                 }
             }
         }
     }
 }
 
+/// TODO
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token<'src> {
     pub kind: TokenKind,
@@ -87,14 +108,17 @@ pub struct Token<'src> {
 }
 
 impl<'src> Token<'src> {
+    /// TODO
     fn new(kind: TokenKind, span: Span<'src>) -> Self {
         Self { kind, span }
     }
     
+    /// TODO
     fn at_position(kind: TokenKind, pos: Position<'src>) -> Self {
         Self::new(kind, Span::from_position(pos))
     }
     
+    /// TODO
     fn from_span(span: Span<'src>) -> Self {
         Self::new(TokenKind::from_span(&span), span)
     }
@@ -106,34 +130,32 @@ impl<'src> Token<'src> {
 // Token Streams //
 //===============//
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// TODO
+#[derive(Debug, Clone)]
 pub struct TokenStream<'src> {
     token: Option<Token<'src>>,
-    position: Position<'src>,
-    next_position: Position<'src>,
+    reader: Reader<'src>,
+    next_reader: Reader<'src>,
 }
 
 impl<'src> TokenStream<'src> {
+    /// TODO
     #[must_use]
-    fn from_pos(position: Position<'src>) -> Self {
+    fn from_pos(reader: Reader<'src>) -> Self {
         TokenStream {
-            token: Some(Token::at_position(TokenKind::FileStart, position.clone())),
-            position: position.clone(),
-            next_position: position,
+            token: Some(Token::at_position(TokenKind::Start, reader.position().clone())),
+            reader: reader.clone(),
+            next_reader: reader,
         }
     }
     
+    /// TODO
     #[must_use]
     fn from_source(source: &'src Source) -> Self {
-        TokenStream::from_pos(Position::new(source))
-    }
-}
-
-impl<'src> TokenStream<'src> {
-    fn get_pos(&self) -> &Position<'src> {
-        &self.position
+        TokenStream::from_pos(Reader::new(source))
     }
     
+    /// TODO
     fn peek(&self) -> &Option<Token<'src>> {
         &self.token
     }
@@ -143,12 +165,29 @@ impl<'src> Iterator for TokenStream<'src> {
     type Item = Token<'src>;
     
     fn next(&mut self) -> Option<Self::Item> {
-        if self.token.is_none() {
+        // No more tokens after end of input
+        if self.token.is_none() || self.token.as_ref().is_some_and(|t| t.kind == TokenKind::End) {
+            self.token = None;
             return None;
         }
         
         // update last pos before updating pos
-        self.position = self.next_position.clone();
+        self.reader = self.next_reader.clone();
+        
+        // skip whitespace
+        self.next_reader.skip_while(&pattern::Whitespace);
+        
+        // check for end of input
+        todo!();
+        
+        // check for a comment
+        if self.next_reader.starts_with(STRING_COMMENT_START) {
+            let span = self.next_reader.read_until_after(STRING_COMMENT_STOP);
+            return Some(Token::new(TokenKind::Comment, span));
+        }
+        
+        // read the identifier
+        todo!();
         
         // // skip whitespace
         // self.next_position.consume_match(&*REGEX_WHITESPACE);
@@ -206,6 +245,7 @@ impl<'src> Iterator for TokenStream<'src> {
 // Token Trees //
 //=============//
 
+/// TODO
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenTree<'src> {
     Token(Token<'src>),
@@ -216,14 +256,17 @@ pub enum TokenTree<'src> {
     }
 }
 
+/// TODO
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenTreeError<'src> {
     UnmatchedOpeningBrace(Span<'src>),
     UnmatchedClosingBrace(Span<'src>),
 }
 
 impl<'src> TokenTree<'src> {
+    /// TODO
     pub fn from_token_stream(tokens: &mut TokenStream<'src>) -> Result<TokenTree<'src>, TokenTreeError<'src>> {
-        let start = tokens.position.clone();
+        let start = tokens.reader.position().clone();
         let mut contents = Vec::new();
         loop {
             match Self::next_from_token_stream(tokens) {
@@ -232,15 +275,16 @@ impl<'src> TokenTree<'src> {
                 Err(err) => return Err(err),
             }
         }
-        let stop = tokens.position.clone();
+        let stop = tokens.reader.position().clone();
         
         Ok(TokenTree::Braces {
-            open: Token::at_position(TokenKind::FileStart, start),
-            close: Token::at_position(TokenKind::FileStop, stop),
+            open: Token::at_position(TokenKind::Start, start),
+            close: Token::at_position(TokenKind::End, stop),
             contents,
         })
     }
     
+    /// TODO
     fn next_from_token_stream(tokens: &mut TokenStream<'src>) -> Result<Option<TokenTree<'src>>, TokenTreeError<'src>> {
         if let Some(token) = tokens.next() {
             match token.kind {
@@ -270,6 +314,7 @@ impl<'src> TokenTree<'src> {
         }
     }
     
+    /// TODO
     fn contents_from_token_stream(tokens: &mut TokenStream<'src>) -> Result<Vec<TokenTree<'src>>, TokenTreeError<'src>> {
         // let mut contents = Vec::new();
         // loop {
