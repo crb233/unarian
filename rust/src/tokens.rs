@@ -122,6 +122,11 @@ impl<'src> Token<'src> {
     fn from_span(span: Span<'src>) -> Self {
         Self::new(TokenKind::from_span(&span), span)
     }
+    
+    /// TODO
+    pub fn get_str(&self) -> &str {
+        self.span.get_str()
+    }
 }
 
 
@@ -140,7 +145,7 @@ pub struct TokenStream<'src> {
 impl<'src> TokenStream<'src> {
     /// TODO
     #[must_use]
-    fn from_reader(reader: Reader<'src>) -> Self {
+    pub fn from_reader(reader: Reader<'src>) -> Self {
         let pos = reader.position().clone();
         TokenStream {
             reader: reader,
@@ -150,12 +155,12 @@ impl<'src> TokenStream<'src> {
     
     /// TODO
     #[must_use]
-    fn from_source(source: &'src Source) -> Self {
+    pub fn from_source(source: &'src Source) -> Self {
         TokenStream::from_reader(Reader::new(source))
     }
     
     /// TODO
-    fn peek(&self) -> &Option<Token<'src>> {
+    pub fn peek(&self) -> &Option<Token<'src>> {
         &self.token
     }
     

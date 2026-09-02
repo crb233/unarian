@@ -5,19 +5,38 @@ mod tokens;
 mod syntax;
 mod pattern;
 
-trait X {
-    
-}
-
-impl X for &str {}
-
-impl X for i64 {}
-
 fn main() {
-    println!("Hello, world!");
-    let a: &str = "hello";
-    let b: i64 = -13248;
-    let z: [&dyn X; 2] = [&a, &b];
+    let code = "
+        # Returns 0.
+        0 { - 0 | }
+        
+        # Returns n if n = 0 and fails otherwise.
+        if=0 { { - 0 | + } - }
+        
+        # Returns n if n = 1 and fails otherwise.
+        if=1 { - if=0 + }
+        
+        # Returns 3 * n.
+        *3 { - *3 + + + | }
+        
+        # Returns n / 2 if n % 2 = 0 and fails otherwise.
+        if/2 { - if/2 + + | if=0 }
+        
+        # Implements the Collatz map.
+        collatz { if/2 | *3 + }
+        
+        # Implements the Collatz counting function.
+        collatz-count { if=1 | collatz collatz-count }
+        
+        main { collatz-count }
+    ";
+    
+    let source = source::Source::new("<test-code>", code);
+    let tokens: Vec<tokens::Token<'_>> = tokens::TokenStream::from_source(&source).filter(|t| t.kind != tokens::TokenKind::Comment).collect();
+    let length = tokens.iter().map(|t| t.span.get_str().len()).max().unwrap_or(0);
+    for token in tokens {
+        println!("{: <length$} : {:?}", token.span.get_str().trim(), token.kind);
+    }
 }
 
 

@@ -1,6 +1,6 @@
 use std::borrow::{Borrow, Cow};
 use std::cmp::Ordering;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::path::Path;
 use std::str::Chars;
 
@@ -75,7 +75,7 @@ where I: Iterator {
 /// Represents a single named source of code.
 /// 
 /// TODO: Consider renaming Text or Code.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Source<'s> {
     /// The name of the source. For example, could be `"<input>"` to represent
     /// user input or `"./filename.txt"` to represent a file.
@@ -83,6 +83,12 @@ pub struct Source<'s> {
     
     /// The text of the source code.
     text: Cow<'s, str>,
+}
+
+impl<'s> Debug for Source<'s> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "Source {{ name: \"{}\" }}", self.name)
+    }
 }
 
 impl<'s> Source<'s> {
@@ -124,7 +130,7 @@ impl<'a> Display for Source<'a> {
 //==================//
 
 /// Represents a character position within the text of a Source.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Position<'src> {
     /// The source text that this position refers to.
     src: &'src Source<'src>,
@@ -258,6 +264,12 @@ impl<'src> Ord for Position<'src> {
     }
 }
 
+impl<'src> Debug for Position<'src> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "Position {{ src: \"{}\", line_index: {}, col_index: {} }}", self.src.name, self.line_index, self.col_index)
+    }
+}
+
 impl<'src> Display for Position<'src> {
     /// Display the current position in a human-readable format, including the
     /// name of the source text, and the position's line and column numbers.
@@ -273,7 +285,7 @@ impl<'src> Display for Position<'src> {
 //==============//
 
 /// Represents a substring within the text of a Source.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Span<'src> {
     /// The Source within which the substring lives
     src: &'src Source<'src>,
@@ -441,6 +453,12 @@ impl<'src> Span<'src> {
     }
 }
 
+impl<'s> Debug for Span<'s> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "Span {{ start: {}, end: {} }}", self.start, self.end)
+    }
+}
+
 impl<'src> Display for Span<'src> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{} from {} to {}", self.src, self.start, self.end)
@@ -491,7 +509,7 @@ impl<'src> Reader<'src> {
     /// be on a valid character boundary.
     fn move_forward(&mut self, bytes: usize) {
         let char_byte = self.pos.char_byte + bytes;
-        // assert!(self.src.text.is_char_boundary(char_byte));
+        assert!(self.src.text.is_char_boundary(char_byte));
         while self.pos.char_byte < char_byte {
             self.next();
         }
@@ -525,7 +543,7 @@ impl<'src> Reader<'src> {
     
     /// TODO
     fn remainder(&self) -> &'src str {
-        unsafe { self.src.get_slice(0, self.pos.char_byte) }
+        unsafe { self.src.get_slice(self.pos.char_byte, self.src.text.len()) }
     }
     
     /// TODO
