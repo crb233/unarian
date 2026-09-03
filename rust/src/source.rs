@@ -18,6 +18,16 @@ fn usize_str_width(x: usize) -> usize {
     1 + x.checked_ilog10().unwrap_or(0) as usize
 }
 
+/// Represents an iterator with an additional `peek` method that allows us to
+/// see the next item without advancing the iterator.
+pub trait PeekableIterator: Iterator {
+    /// Peeks at the next item in the iterator without advancing it.
+    #[must_use]
+    fn peek(&self) -> Option<&<Self as Iterator>::Item>;
+}
+
+/// Wraps an arbitrary iterator that makes it peekable.
+/// 
 /// This is almost identical to `std::iter::Peekable`, except that we don't
 /// need a mutable reference to peek at the next item. The advantage of
 /// `std::iter::Peekable` is that it's lazy and won't compute the next item
@@ -32,18 +42,14 @@ where I: Iterator {
 impl<I> Peekable<I>
 where I: Iterator {
     /// Creates and returns a new `Peekable` from the given iterator.
+    #[must_use]
     pub fn new(mut iterator: I) -> Self {
         let current = iterator.next();
         Self { current, iterator }
     }
-    
-    /// Peeks at the next element in the iterator without advancing it.
-    pub fn peek(&self) -> &Option<I::Item> {
-        &self.current
-    }
 }
 
-/// `Peekable` is itself an iterator.
+/// `Peekable` is an iterator.
 impl<I> Iterator for Peekable<I>
 where I: Iterator {
     type Item = I::Item;
@@ -53,8 +59,17 @@ where I: Iterator {
     }
 }
 
+/// `Peekable` is a peekable iterator.
+impl<I> PeekableIterator for Peekable<I>
+where I: Iterator {
+    fn peek(&self) -> Option<&<Self as Iterator>::Item> {
+        self.current.as_ref()
+    }
+}
+
 /// This trait adds a method that transforms any iterator into a `Peekable`.
 pub trait IntoPeekable: Sized + Iterator {
+    #[must_use]
     fn into_peekable(self) -> Peekable<Self>;
 }
 
@@ -103,6 +118,7 @@ impl<'s> Source<'s> {
     }
     
     /// Attempt to create a new Source from the file at a specified path.
+    #[must_use]
     pub fn from_file<P: AsRef<Path>>(path: &P) -> std::io::Result<Self> {
         let name = path.as_ref().to_string_lossy().into_owned();
         let text = std::fs::read_to_string(path)?;
@@ -110,6 +126,14 @@ impl<'s> Source<'s> {
     }
     
     /// TODO
+    /// 
+    /// # Safety
+    /// 
+    /// Any call must satisfy:
+    /// 1. `start <= end`,
+    /// 2. `(self.text.borrow() as &str).is_char_boundary(start)`,
+    /// 3. and `(self.text.borrow() as &str).is_char_boundary(end)`.
+    #[must_use]
     unsafe fn get_slice(&self, start: usize, end: usize) -> &str {
         let text: &str = self.text.borrow();
         &text[start .. end]
@@ -175,28 +199,33 @@ impl<'src> Position<'src> {
     }
     
     /// Returns the index of the current character.
+    #[must_use]
     pub fn get_char_index(&self) -> usize {
         self.char_index
     }
     
     /// Returns the index of the current line.
+    #[must_use]
     pub fn get_line_index(&self) -> usize {
         self.line_index
     }
     
     /// Returns the index of the current column.
+    #[must_use]
     pub fn get_col_index(&self) -> usize {
         self.col_index
     }
     
     /// Returns the human-readable number of the current line.
+    #[must_use]
     pub fn get_line_number(&self) -> usize {
-        self.line_index
+        self.line_index + 1
     }
     
     /// Returns the human-readable number of the current column.
+    #[must_use]
     pub fn get_col_number(&self) -> usize {
-        self.col_index
+        self.col_index + 1
     }
     
     /// Given the next character in the source, increments this position to
@@ -245,8 +274,7 @@ impl<'src> PartialOrd for Position<'src> {
     ///
     /// - Panics if the two positions come from different sources.
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        assert_eq!(self.src, other.src, "Can only compare positions from the same source.");
-        Some(self.char_byte.cmp(&other.char_byte))
+        Some(self.cmp(other))
     }
 }
 
@@ -274,7 +302,7 @@ impl<'src> Display for Position<'src> {
     /// Display the current position in a human-readable format, including the
     /// name of the source text, and the position's line and column numbers.
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "{} at {}:{}", self.src.name, self.line_index + 1, self.col_index + 1)
+        write!(f, "{} at {}:{}", self.src.name, self.get_line_number(), self.get_col_number())
     }
 }
 
@@ -344,7 +372,7 @@ impl<'src> Span<'src> {
     #[must_use]
     pub fn contains(&self, other: &Span<'src>) -> bool {
         assert_eq!(self.src, other.src, "Containment can only be checked for spans from the same source.");
-        return self.start <= other.start && self.end >= other.end;
+        self.start <= other.start && self.end >= other.end
     }
     
     /// Returns the number of bytes contained in this span, when each character
@@ -453,7 +481,7 @@ impl<'src> Span<'src> {
     }
 }
 
-impl<'s> Debug for Span<'s> {
+impl<'src> Debug for Span<'src> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "Span {{ start: {}, end: {} }}", self.start, self.end)
     }
@@ -482,19 +510,24 @@ pub struct Reader<'src> {
     
     /// The current position of this Reader within the source text.
     pos: Position<'src>,
+    
+    // TODO: Consider also storing a reference to the actual string slice rather
+    // than constantly calling `remainder()` to recompute it
 }
 
 impl<'src> Reader<'src> {
     /// Creates a new Reader at the start of the source.
+    #[must_use]
     pub fn new(src: &'src Source<'src>) -> Self {
         Reader {
             src,
             chars: src.text.chars().into_peekable(),
-            pos: Position::new(&src),
+            pos: Position::new(src),
         }
     }
     
     /// Returns the current position of this Reader.
+    #[must_use]
     pub fn position(&self) -> &Position<'src> {
         &self.pos
     }
@@ -515,14 +548,9 @@ impl<'src> Reader<'src> {
         }
     }
     
-    /// Returns the character at the current position if it exists.
-    pub fn peek(&self) -> &Option<char> {
-        self.chars.peek()
-    }
-    
     /// Increments this position to point to the next character in the source,
     /// and returns the current character if it exists.
-    pub fn next(&mut self) -> Option<char> {
+    fn next(&mut self) -> Option<char> {
         if let Some(c) = self.chars.next() {
             self.pos.advance_by_char(c);
             Some(c)
@@ -531,22 +559,31 @@ impl<'src> Reader<'src> {
         }
     }
     
+    /// Returns the character at the current position if it exists.
+    fn peek(&self) -> Option<char> {
+        self.chars.peek().cloned()
+    }
+    
     /// TODO
+    #[must_use]
     pub fn is_at_start(&self) -> bool {
         self.pos.char_byte == 0
     }
     
     /// TODO
+    #[must_use]
     pub fn is_at_end(&self) -> bool {
         self.peek().is_none()
     }
     
     /// TODO
+    #[must_use]
     fn remainder(&self) -> &'src str {
         unsafe { self.src.get_slice(self.pos.char_byte, self.src.text.len()) }
     }
     
     /// TODO
+    #[must_use]
     pub fn starts_with<P: Pattern>(&mut self, pattern: P) -> bool {
         pattern.prefix_length_of(self.remainder()).is_some()
     }
@@ -590,6 +627,7 @@ impl<'src> Reader<'src> {
     }
     
     /// TODO
+    #[must_use]
     pub fn read_once<P: Pattern>(&mut self, pattern: P) -> Option<Span<'src>> {
         if let Some(n) = pattern.prefix_length_of(self.remainder()) {
             let start = self.pos.clone();
@@ -600,9 +638,10 @@ impl<'src> Reader<'src> {
     }
     
     /// TODO
-    pub fn read_while<P: Pattern>(&mut self, pattern: P) -> Vec<Span<'src>> {
+    #[must_use]
+    pub fn read_while<P: Pattern + Copy>(&mut self, pattern: P) -> Vec<Span<'src>> {
         let mut matches = Vec::new();
-        if let Some(n) = pattern.prefix_length_of(self.remainder()) {
+        while let Some(n) = pattern.prefix_length_of(self.remainder()) {
             let start = self.pos.clone();
             self.move_forward(n);
             matches.push(Span::new(start, self.pos.clone()));
@@ -611,6 +650,7 @@ impl<'src> Reader<'src> {
     }
     
     /// TODO
+    #[must_use]
     pub fn read_until<P: Pattern + Copy>(&mut self, pattern: P) -> Span<'src> {
         let start = self.pos.clone();
         self.skip_until(pattern);
@@ -620,6 +660,7 @@ impl<'src> Reader<'src> {
     /// TODO
     /// 
     /// TODO should this fail if we don't eventually match the pattern?
+    #[must_use]
     pub fn read_until_after<P: Pattern + Copy>(&mut self, pattern: P) -> Span<'src> {
         let start = self.pos.clone();
         self.skip_until_after(pattern);

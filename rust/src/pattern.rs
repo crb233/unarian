@@ -9,14 +9,16 @@
 /// 
 /// # Safety
 /// 
-/// Implementations of this trait must guarantee that
-/// `x.prefix_length_of(s).is_none_or(|n| s.is_char_boundary(n))`. In other
-/// words, if an index is returned, it must be at a valid character boundary in
-/// the provided string.
-/// 
-/// TODO: Consider changing this trait to take `self` instead of `&self`. Then
-/// we can implement it for immutable and mutable reference types, among others.
-/// We would also no longer need the `?Sized` bounds below.
+/// Let `x: X` where `X` implements `Pattern` and `s: str`. Then the
+/// implementation of `Pattern` for `X`must guarantee:
+/// 1. `x.prefix_length_of(s).is_none_or(|n| s.is_char_boundary(n))`, i.e., if
+///    a prefix length is returned, it must be at a valid character boundary in
+///    the string `s`;
+/// 2. `x.prefix_length_of(s).is_some() == x.matches_start(s)`, i.e., `x`
+///    matches the start of `s` if and only if `x` is a prefix of `s`;
+/// 3. `self.prefix_length_of(s).is_some_and(|n| n == s.len()) == x.matches(s)`,
+///    i.e., `x` matches `s` if and only if the prefix length of `x` in `s` is
+///    the length of `s`.
 pub unsafe trait Pattern {
     /// Returns `Some(length)` giving the length of the matching pattern at the
     /// beginning of the given string, or `None` if there's no match.
@@ -77,6 +79,19 @@ unsafe impl Pattern for &str {
         }
     }
 }
+
+// unsafe impl<F> Pattern for &F
+// where F: Fn(&str) -> bool {
+//     fn prefix_length_of(self, haystack: &str) -> Option<usize> {
+//         for (length, _) in haystack.char_indices() {
+//             let substring = &haystack[0 .. length];
+//             if self(substring) {
+//                 return Some(length);
+//             }
+//         }
+//         None
+//     }
+// }
 
 // #[derive(Debug, Clone, Copy)]
 // pub struct Whitespace;

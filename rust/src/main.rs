@@ -1,4 +1,4 @@
-#![allow(unused)]
+#![allow(unused, clippy::double_must_use)]
 
 mod source;
 mod tokens;
