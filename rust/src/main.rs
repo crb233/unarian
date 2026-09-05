@@ -1,6 +1,6 @@
 #![allow(unused, clippy::double_must_use)]
 
-use crate::tokens::TokenTree;
+use crate::tokens::{TokenTree, TokenTreeStream};
 
 mod source;
 mod tokens;
@@ -34,8 +34,10 @@ fn main() {
     ";
     
     let source = source::Source::new("<test-code>", code);
-    let tree = TokenTree::from_source(&source).unwrap();
-    println!("{tree}");
+    let trees = TokenTree::all_from_source(&source).unwrap();
+    for tree in trees {
+        println!("{tree}");
+    }
 }
 
 

@@ -2,18 +2,55 @@
 # To Do
 
 - [ ] command-line
-    - [ ] load library from file
-    - [ ] evaluation expression
+    - [ ] command `help` or `--help` or `-h` prints a help message
+    - [ ] command `run` compiles internally and immediately runs
+    - [ ] command `check` checks for compilation errors
+    - [ ] command `build` compiles to bytecode
+    - [ ] command `format` formats the library source code
+    - [ ] command `interact` or `repl` enters an interactive REPL
+    - [ ] no command also enters an interactive REPL
+    - [ ] positional arguments specify paths to libraries to compile
+    - [ ] argument `--library` or `--lib` or `-l` receives a literal string library
+    - [ ] `run` argument `--expr` or `-e` receives a single expression to be evaluated
+    - [ ] `run` argument `--input` or `-i` receives a list of input integers; otherwise, read from stdin
+    - [ ] `run` flag `--stdin` or `-s` means to read input integers from stdin
+    - [ ] `build` argument `--output` or `-o` receives a single output path for compilation
+    - [ ] `format` argument `--output` or `-o` receives a single output path for formatting; if specified, then all libraries will be combined into one output
+    - [ ] `format` flag `--inplace` means to format all libraries in-place
+    - [ ] `format` flag `--minimize` or `-m` means to minimize the code as much as possible
+    - [ ] `format` flag ...
 - [ ] parsing
+    - [x] from text to token stream
+    - [x] from token stream to token tree
+    - [ ] from token tree to syntax tree
+- [ ] transformation
+    - [ ] auto-formatting with customizable options
+        - [ ] indentation option (tabs / spaces and how many)
+        - [ ] maximum line length
+        - [ ] spacing between function declarations
+    - [ ] minimization with customizable options
+        - [ ] obfuscate option (change function names)
 - [ ] optimization
     - [ ] tail-call optimization
     - [ ] identify common functions (multiplication, division, ...etc.)
 - [ ] execution
+    - [ ] increment `+` and decrement `-`
+    - [ ] compound function calls
+    - [ ] composition
+    - [ ] alternation
     - [ ] random `%`
     - [ ] input `?`
     - [ ] output `!`
     - [ ] trace `@`
 - [ ] bytecode
+    - [ ] increment `+` and decrement `-`
+    - [ ] compound function calls
+    - [ ] composition
+    - [ ] alternation
+    - [ ] random `%`
+    - [ ] input `?`
+    - [ ] output `!`
+    - [ ] trace `@`
 - [ ] interactive mode
     - [ ] distinguish commands from declarations
     - [ ] 'evaluate' command for evaluating an expression on input
@@ -21,3 +58,4 @@
     - [ ] 'erase' command for deleting function declarations
     - [ ] 'dependencies' command for viewing the dependency tree of a function
     - [ ] allow multi-line inputs
+- [ ] testing

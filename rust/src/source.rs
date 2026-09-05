@@ -126,6 +126,12 @@ impl<'s> Source<'s> {
     }
     
     /// TODO
+    #[must_use]
+    pub fn str(&self) -> &str {
+        self.text.borrow()
+    }
+    
+    /// TODO
     /// 
     /// # Safety
     /// 
@@ -134,9 +140,8 @@ impl<'s> Source<'s> {
     /// 2. `(self.text.borrow() as &str).is_char_boundary(start)`,
     /// 3. and `(self.text.borrow() as &str).is_char_boundary(end)`.
     #[must_use]
-    unsafe fn get_slice(&self, start: usize, end: usize) -> &str {
-        let text: &str = self.text.borrow();
-        &text[start .. end]
+    unsafe fn str_slice(&self, start: usize, end: usize) -> &str {
+        &self.str()[start .. end]
     }
 }
 
@@ -200,31 +205,31 @@ impl<'src> Position<'src> {
     
     /// Returns the index of the current character.
     #[must_use]
-    pub fn get_char_index(&self) -> usize {
+    pub fn char_index(&self) -> usize {
         self.char_index
     }
     
     /// Returns the index of the current line.
     #[must_use]
-    pub fn get_line_index(&self) -> usize {
+    pub fn line_index(&self) -> usize {
         self.line_index
     }
     
     /// Returns the index of the current column.
     #[must_use]
-    pub fn get_col_index(&self) -> usize {
+    pub fn col_index(&self) -> usize {
         self.col_index
     }
     
     /// Returns the human-readable number of the current line.
     #[must_use]
-    pub fn get_line_number(&self) -> usize {
+    pub fn line_number(&self) -> usize {
         self.line_index + 1
     }
     
     /// Returns the human-readable number of the current column.
     #[must_use]
-    pub fn get_col_number(&self) -> usize {
+    pub fn col_number(&self) -> usize {
         self.col_index + 1
     }
     
@@ -298,7 +303,7 @@ impl Display for Position<'_> {
     /// Display the current position in a human-readable format, including the
     /// name of the source text, and the position's line and column numbers.
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "{} at {}:{}", self.src.name, self.get_line_number(), self.get_col_number())
+        write!(f, "{} at {}:{}", self.src.name, self.line_number(), self.col_number())
     }
 }
 
@@ -392,13 +397,13 @@ impl<'src> Span<'src> {
     
     /// Returns the substring that this span represents.
     #[must_use]
-    pub fn get_str(&self) -> &'src str {
+    pub fn str(&self) -> &'src str {
         &self.src.text[self.start.char_byte .. self.end.char_byte]
     }
     
     /// Returns a vector of strings for each line of the span.
     #[must_use]
-    pub fn get_lines(&self) -> Vec<(usize, &'src str)> {
+    pub fn lines(&self) -> Vec<(usize, &'src str)> {
         (self.start.line_index ..= self.end.line_index)
             .zip(self.src.text[self.start.line_byte ..].lines())
             .collect()
@@ -415,12 +420,16 @@ impl<'src> Span<'src> {
     /// TODO: Properly handle graphemes and unicode character width. See the
     /// crates `unicode_width` and `unicode_segmentation` for more.
     /// 
+    /// TODO: Consider generalizing output formatting from `Vec<String>` to some
+    /// kind of rich text representation with basic text styling options like
+    /// background color, foreground color, bold, and italic.
+    /// 
     /// TODO: Does it make sense for spans to ignore comments? This would
     /// increase the complexity of this code since it would have to detect
     /// comments.
     #[must_use]
-    pub fn get_formatted_lines(&self) -> Vec<String> {
-        let lines = self.get_lines();
+    pub fn formatted_lines(&self) -> Vec<String> {
+        let lines = self.lines();
         let last_line = lines.last().expect("at least one line");
         let (last_row, last_text) = last_line;
         let width = usize_str_width(*last_row);
@@ -471,7 +480,7 @@ impl<'src> Span<'src> {
     /// Alternative form of `<Self as Display>::fmt` that formats this span with
     /// a specified indentation.
     pub fn fmt_indented(&self, f: &mut Formatter, indent: usize) -> std::fmt::Result {
-        for line in self.get_formatted_lines() {
+        for line in self.formatted_lines() {
             write!(f, "{:>indent$}{}", "", line)?;
         }
         Ok(())
@@ -547,7 +556,7 @@ impl<'src> Reader<'src> {
     
     /// Increments this position to point to the next character in the source,
     /// and returns the current character if it exists.
-    fn next(&mut self) -> Option<char> {
+    pub fn next(&mut self) -> Option<char> {
         if let Some(c) = self.chars.next() {
             self.pos.advance_by_char(c);
             Some(c)
@@ -557,7 +566,7 @@ impl<'src> Reader<'src> {
     }
     
     /// Returns the character at the current position if it exists.
-    fn peek(&self) -> Option<char> {
+    pub fn peek(&self) -> Option<char> {
         self.chars.peek().copied()
     }
     
@@ -576,7 +585,7 @@ impl<'src> Reader<'src> {
     /// TODO
     #[must_use]
     fn remainder(&self) -> &'src str {
-        unsafe { self.src.get_slice(self.pos.char_byte, self.src.text.len()) }
+        unsafe { self.src.str_slice(self.pos.char_byte, self.src.text.len()) }
     }
     
     /// TODO
@@ -593,6 +602,10 @@ impl<'src> Reader<'src> {
     }
     
     /// TODO
+    /// 
+    /// TODO: Consider changing the name so that it doesn't conflict with
+    /// `Iterator::skip_while` and then we can implement `Iterator` for `Reader`
+    /// without worrying about the name conflict.
     pub fn skip_while<P: Pattern + Copy>(&mut self, pattern: P) {
         while let Some(n) = pattern.prefix_length_of(self.remainder()) {
             self.move_forward(n);

@@ -58,16 +58,30 @@ pub enum AtomicKind {
     Trace,
 }
 
+impl AtomicKind {
+    /// TODO
+    #[must_use]
+    fn from_span(span: &Span<'_>) -> Option<Self> {
+        match span.str() {
+            STRING_INCREMENT => Some(AtomicKind::Increment),
+            STRING_DECREMENT => Some(AtomicKind::Decrement),
+            STRING_RANDOM    => Some(AtomicKind::Random),
+            STRING_INPUT     => Some(AtomicKind::Input),
+            STRING_OUTPUT    => Some(AtomicKind::Output),
+            STRING_TRACE     => Some(AtomicKind::Trace),
+            string           => None,
+        }
+    }
+}
+
 /// TODO
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
-    Start,
-    End,
     Comment,
     OpenBrace,
     CloseBrace,
     Alternation,
-    Identifier,
+    Compound,
     Atomic(AtomicKind),
 }
 
@@ -75,28 +89,36 @@ impl TokenKind {
     /// TODO
     #[must_use]
     fn is_opening_pair(self) -> bool {
-        matches!(self, TokenKind::Start | TokenKind::OpenBrace)
+        matches!(self, TokenKind::OpenBrace)
     }
     
     /// TODO
     #[must_use]
     fn is_closing_pair(self) -> bool {
-        matches!(self, TokenKind::End | TokenKind::CloseBrace)
+        matches!(self, TokenKind::CloseBrace)
     }
     
     /// TODO
     #[must_use]
     fn is_matching_pair(self, other: Self) -> bool {
         matches!((self, other),
-            (TokenKind::Start, TokenKind::End) |
             (TokenKind::OpenBrace, TokenKind::CloseBrace)
         )
     }
     
     /// TODO
     #[must_use]
+    fn identifier_from_span(span: &Span<'_>) -> Self {
+        match AtomicKind::from_span(span) {
+            Some(atomic_kind) => TokenKind::Atomic(atomic_kind),
+            None => TokenKind::Compound,
+        }
+    }
+    
+    /// TODO
+    #[must_use]
     fn from_span(span: &Span<'_>) -> Self {
-        match span.get_str() {
+        match span.str() {
             STRING_OPEN_BRACE  => TokenKind::OpenBrace,
             STRING_CLOSE_BRACE => TokenKind::CloseBrace,
             STRING_ALTERNATION => TokenKind::Alternation,
@@ -110,7 +132,7 @@ impl TokenKind {
                 if STRING_COMMENT_START.matches_start(string) {
                     TokenKind::Comment
                 } else {
-                    TokenKind::Identifier
+                    TokenKind::Compound
                 }
             }
         }
@@ -120,13 +142,11 @@ impl TokenKind {
 impl std::fmt::Display for TokenKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            TokenKind::Start => write!(f, "Start"),
-            TokenKind::End => write!(f, "End"),
             TokenKind::Comment => write!(f, "Comment"),
             TokenKind::OpenBrace => write!(f, "OpenBrace"),
             TokenKind::CloseBrace => write!(f, "CloseBrace"),
             TokenKind::Alternation => write!(f, "Alternation"),
-            TokenKind::Identifier => write!(f, "Identifier"),
+            TokenKind::Compound => write!(f, "Compound"),
             TokenKind::Atomic(AtomicKind::Increment) => write!(f, "Atomic(Increment)"),
             TokenKind::Atomic(AtomicKind::Decrement) => write!(f, "Atomic(Decrement)"),
             TokenKind::Atomic(AtomicKind::Random) => write!(f, "Atomic(Random)"),
@@ -161,14 +181,20 @@ impl<'src> Token<'src> {
     
     /// TODO
     #[must_use]
+    fn identifier_from_span(span: Span<'src>) -> Self {
+        Self::new(TokenKind::identifier_from_span(&span), span)
+    }
+    
+    /// TODO
+    #[must_use]
     fn from_span(span: Span<'src>) -> Self {
         Self::new(TokenKind::from_span(&span), span)
     }
     
     /// TODO
     #[must_use]
-    pub fn get_str(&self) -> &str {
-        self.span.get_str()
+    pub fn str(&self) -> &str {
+        self.span.str()
     }
     
     /// TODO
@@ -205,40 +231,35 @@ pub struct TokenStream<'src> {
 }
 
 /// TODO
-/// 
-/// TODO: Maybe don't return tokens for the start and end of the stream. Then
-/// also remove `TokenKind::Start` and `TokenKind::End`
 impl<'src> TokenStream<'src> {
     /// TODO
     #[must_use]
-    pub fn from_reader(reader: Reader<'src>) -> Self {
-        let pos = reader.position().clone();
-        TokenStream {
+    pub fn new(reader: Reader<'src>) -> Self {
+        let mut result = TokenStream {
             reader,
-            token: Some(Token::at_position(TokenKind::Start, pos)),
-        }
+            token: None,
+        };
+        
+        // store the first token and return
+        result.token = result.next();
+        result
     }
     
     /// TODO
     #[must_use]
     pub fn from_source(source: &'src Source) -> Self {
-        TokenStream::from_reader(Reader::new(source))
+        TokenStream::new(Reader::new(source))
     }
     
     /// TODO
-    fn next_token(&mut self) -> Option<Token<'src>> {
-        // no more tokens after end of input
-        if self.token.is_none() || self.token.as_ref().is_some_and(|t| t.kind == TokenKind::End) {
-            return None;
-        }
-        
+    fn next(&mut self) -> Option<Token<'src>> {
         // skip whitespace
         self.reader.skip_while(|c: char| c.is_whitespace());
         
         // check for end of input
         if self.reader.is_at_end() {
             let span = Span::from_position(self.reader.position().clone());
-            return Some(Token::new(TokenKind::End, span));
+            return None;
         }
         
         // check for a comment
@@ -252,7 +273,7 @@ impl<'src> TokenStream<'src> {
             // TODO this isn't portable / compatible with STRING_COMMENT_START
             c.is_whitespace() || c == '#'
         });
-        Some(Token::new(TokenKind::from_span(&span), span))
+        Some(Token::identifier_from_span(span))
     }
 }
 
@@ -260,7 +281,13 @@ impl<'src> Iterator for TokenStream<'src> {
     type Item = Token<'src>;
     
     fn next(&mut self) -> Option<Self::Item> {
-        let next_token = self.next_token();
+        // // no more tokens after end of input
+        // if self.token.is_none() {
+        //     return None;
+        // }
+        
+        // read one more token, replace and return the stored one
+        let next_token = self.next();
         std::mem::replace(&mut self.token, next_token)
     }
 }
@@ -289,91 +316,54 @@ pub enum TokenTree<'src> {
     },
 }
 
-/// TODO
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TokenTreeError<'src> {
-    MissingTokenTree,
-    UnmatchedOpeningBrace(Span<'src>),
-    UnmatchedClosingBrace(Span<'src>),
-}
-
 impl<'src> TokenTree<'src> {
-    // /// TODO
-    // #[must_use]
-    // pub fn from_token_stream(tokens: &mut TokenStream<'src>) -> Result<TokenTree<'src>, TokenTreeError<'src>> {
-    //     let start = tokens.reader.position().clone();
-    //     let mut contents = Vec::new();
-    //     loop {
-    //         match Self::next_subtree(tokens) {
-    //             Ok(Some(token_tree)) => contents.push(token_tree),
-    //             Ok(None) => break,
-    //             Err(err) => return Err(err),
-    //         }
-    //     }
-    //     let stop = tokens.reader.position().clone();
-    //     
-    //     Ok(TokenTree::Group {
-    //         open: Token::at_position(TokenKind::Start, start),
-    //         close: Token::at_position(TokenKind::End, stop),
-    //         contents,
-    //     })
-    // }
-    
     /// TODO
     #[must_use]
-    pub fn from_reader(reader: Reader<'src>) -> Result<TokenTree<'src>, TokenTreeError<'src>> {
-        let mut tokens = TokenStream::from_reader(reader);
-        Self::from_token_stream(&mut tokens)
+    pub fn all(token_stream: TokenStream<'src>) -> Result<Vec<TokenTree<'src>>, TokenTreeError<'src>> {
+        let mut token_tree_stream = TokenTreeStream::new(token_stream);
+        let mut trees = Vec::new();
+        while let Some(tree) = token_tree_stream.next()? {
+            trees.push(tree);
+        }
+        Ok(trees)
     }
     
     /// TODO
     #[must_use]
-    pub fn from_source(source: &'src Source<'src>) -> Result<TokenTree<'src>, TokenTreeError<'src>> {
-        let reader = Reader::new(source);
-        Self::from_reader(reader)
+    pub fn all_from_reader(reader: Reader<'src>) -> Result<Vec<TokenTree<'src>>, TokenTreeError<'src>> {
+        Self::all(TokenStream::new(reader))
     }
     
     /// TODO
     #[must_use]
-    pub fn from_token_stream(tokens: &mut TokenStream<'src>) -> Result<TokenTree<'src>, TokenTreeError<'src>> {
-        if let Some(token) = tokens.next() {
-            if token.is_closing_pair() {
-                Err(TokenTreeError::UnmatchedClosingBrace(token.span))
-            } else if token.is_opening_pair() {
-                let open = token;
-                let mut contents = Vec::new();
-                loop {
-                    if tokens.peek().is_some_and(|tok| open.is_matching_pair(tok)) {
-                        break;
-                    }
-                    match Self::from_token_stream(tokens) {
-                        Ok(token_tree) => contents.push(token_tree),
-                        Err(TokenTreeError::MissingTokenTree) => return Err(TokenTreeError::UnmatchedOpeningBrace(open.span)),
-                        Err(err) => return Err(err),
-                    }
-                };
-                let close = tokens.next().expect("peek() returned Some(_) so next should also");
-                Ok(TokenTree::Group { open, close, contents })
-            } else {
-                Ok(TokenTree::Token(token))
-            }
-        } else {
-            Err(TokenTreeError::MissingTokenTree)
+    pub fn all_from_source(source: &'src Source<'src>) -> Result<Vec<TokenTree<'src>>, TokenTreeError<'src>> {
+        Self::all_from_reader(Reader::new(source))
+    }
+    
+    /// TODO
+    #[must_use]
+    pub fn span(&self) -> Span<'src> {
+        match self {
+            TokenTree::Token(tok) => tok.span.clone(),
+            TokenTree::Group { open, close, .. } =>
+                Span::union(&open.span, &close.span),
         }
     }
     
-    fn fmt_indented(&self, indent: usize, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let width: usize = 4 * indent;
+    /// TODO
+    #[must_use]
+    pub fn fmt_indented(&self, indent: usize, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        const INDENT_AMOUNT: usize = 4;
         match self {
             TokenTree::Token(token) => {
-                writeln!(f, "{:>width$}\"{}\" ({})", "", token.get_str(), token.kind)
+                writeln!(f, "{:>indent$}\"{}\" ({})", "", token.str(), token.kind)
             }
             TokenTree::Group { open, close, contents } => {
-                writeln!(f, "{:>width$}\"{}\" ({})", "", open.get_str(), open.kind)?;
+                writeln!(f, "{:>indent$}\"{}\" ({})", "", open.str(), open.kind)?;
                 for subtree in contents {
-                    subtree.fmt_indented(indent + 1, f)?;
+                    subtree.fmt_indented(indent + INDENT_AMOUNT, f)?;
                 }
-                writeln!(f, "{:>width$}\"{}\" ({})", "", close.get_str(), close.kind)?;
+                writeln!(f, "{:>indent$}\"{}\" ({})", "", close.str(), close.kind)?;
                 Ok(())
             }
         }
@@ -383,5 +373,79 @@ impl<'src> TokenTree<'src> {
 impl std::fmt::Display for TokenTree<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
        self.fmt_indented(0, f)
+    }
+}
+
+/// TODO
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TokenTreeError<'src> {
+    UnmatchedOpeningBrace(Span<'src>),
+    UnmatchedClosingBrace(Span<'src>),
+}
+
+/// TODO
+/// 
+/// TODO: This could easily be modified to be peekable, but is that really
+/// necessary?
+#[derive(Debug, Clone)]
+pub struct TokenTreeStream<'src> {
+    token_stream: TokenStream<'src>,
+}
+
+impl<'src> TokenTreeStream<'src> {
+    /// TODO
+    #[must_use]
+    pub fn new(token_stream: TokenStream<'src>) -> Self {
+        Self { token_stream }
+    }
+    
+    /// TODO
+    #[must_use]
+    pub fn from_reader(reader: Reader<'src>) -> Self {
+        Self::new(TokenStream::new(reader))
+    }
+    
+    /// TODO
+    #[must_use]
+    pub fn from_source(source: &'src Source<'src>) -> Self {
+        Self::from_reader(Reader::new(source))
+    }
+    
+    /// TODO
+    /// 
+    /// TODO: Is there a good reason to switch to `Option<Result<TokenTree,
+    /// ...>>`?
+    /// 
+    /// TODO: Can we make this recover gracefully from errors? What could we
+    /// possibly do if braces aren't correctly matched? Hard to guess what the
+    /// intent was.
+    /// 
+    /// TODO: As currently implemented, we can continue building token trees
+    /// even after the last one failed. Is this acceptable behavior?
+    pub fn next(&mut self) -> Result<Option<TokenTree<'src>>, TokenTreeError<'src>> {
+        if let Some(token) = self.token_stream.next() {
+            if token.is_closing_pair() {
+                Err(TokenTreeError::UnmatchedClosingBrace(token.span))
+            } else if token.is_opening_pair() {
+                let open = token;
+                let mut contents = Vec::new();
+                loop {
+                    if self.token_stream.peek().is_some_and(|tok| open.is_matching_pair(tok)) {
+                        break;
+                    }
+                    match self.next() {
+                        Ok(Some(token_tree)) => contents.push(token_tree),
+                        Ok(None) => return Err(TokenTreeError::UnmatchedOpeningBrace(open.span)),
+                        Err(err) => return Err(err),
+                    }
+                };
+                let close = self.token_stream.next().expect("peek() returned Some(_) so next should also");
+                Ok(Some(TokenTree::Group { open, close, contents }))
+            } else {
+                Ok(Some(TokenTree::Token(token)))
+            }
+        } else {
+            Ok(None)
+        }
     }
 }
