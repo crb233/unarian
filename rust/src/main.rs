@@ -1,5 +1,7 @@
 #![allow(unused, clippy::double_must_use)]
 
+use crate::tokens::TokenTree;
+
 mod source;
 mod tokens;
 mod syntax;
@@ -32,11 +34,8 @@ fn main() {
     ";
     
     let source = source::Source::new("<test-code>", code);
-    let tokens: Vec<tokens::Token<'_>> = tokens::TokenStream::from_source(&source).filter(|t| t.kind != tokens::TokenKind::Comment).collect();
-    let length = tokens.iter().map(|t| t.span.get_str().len()).max().unwrap_or(0);
-    for token in tokens {
-        println!("{: <length$} : {:?}", token.span.get_str().trim(), token.kind);
-    }
+    let tree = TokenTree::from_source(&source).unwrap();
+    println!("{tree}");
 }
 
 

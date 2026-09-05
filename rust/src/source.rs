@@ -89,7 +89,7 @@ where I: Iterator {
 
 /// Represents a single named source of code.
 /// 
-/// TODO: Consider renaming Text or Code.
+/// TODO: Consider renaming to `Text` or `Code`.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Source<'s> {
     /// The name of the source. For example, could be `"<input>"` to represent
@@ -100,14 +100,14 @@ pub struct Source<'s> {
     text: Cow<'s, str>,
 }
 
-impl<'s> Debug for Source<'s> {
+impl Debug for Source<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "Source {{ name: \"{}\" }}", self.name)
     }
 }
 
 impl<'s> Source<'s> {
-    /// Create a new Source with the specified name and text.
+    /// Creates a new `Source` object with the specified name and text.
     #[must_use]
     pub fn new<N, T>(name: N, text: T) -> Self
     where N: Into<String>, T: Into<Cow<'s, str>> {
@@ -117,7 +117,7 @@ impl<'s> Source<'s> {
         }
     }
     
-    /// Attempt to create a new Source from the file at a specified path.
+    /// Attempts to create a new `Source` object from the text file at a path.
     #[must_use]
     pub fn from_file<P: AsRef<Path>>(path: &P) -> std::io::Result<Self> {
         let name = path.as_ref().to_string_lossy().into_owned();
@@ -140,8 +140,8 @@ impl<'s> Source<'s> {
     }
 }
 
-impl<'a> Display for Source<'a> {
-    /// Display only the name of the Source, not its text.
+impl Display for Source<'_> {
+    /// Display only the name of the `Source`, not its text.
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{}", self.name)
     }
@@ -153,7 +153,7 @@ impl<'a> Display for Source<'a> {
 // Source Positions //
 //==================//
 
-/// Represents a character position within the text of a Source.
+/// Represents a character position within the text of a `Source` object.
 #[derive(Clone)]
 pub struct Position<'src> {
     /// The source text that this position refers to.
@@ -176,7 +176,7 @@ pub struct Position<'src> {
 }
 
 impl<'src> Position<'src> {
-    /// Creates a new position at the start of the specified Source.
+    /// Creates a new position at the start of the specified `Source` object.
     #[must_use]
     pub fn new(src: &'src Source<'src>) -> Self {
         Self {
@@ -253,8 +253,7 @@ impl<'src> Position<'src> {
     }
 }
 
-/// This must be implemented manually because `Chars` doesn't implement `PartialEq`
-impl<'src> PartialEq for Position<'src> {
+impl PartialEq for Position<'_> {
     /// Two positions compare equal if and only if they are from the same source
     /// and they have the same byte index.
     fn eq(&self, other: &Self) -> bool {
@@ -262,11 +261,9 @@ impl<'src> PartialEq for Position<'src> {
     }
 }
 
-/// This must be implemented manually because `Chars` doesn't implement `Eq`
-impl<'src> Eq for Position<'src> { }
+impl Eq for Position<'_> { }
 
-/// This must be implemented manually because `Chars` doesn't implement `PartialOrd`
-impl<'src> PartialOrd for Position<'src> {
+impl PartialOrd for Position<'_> {
     /// Returns the natural ordering between two positions based on their
     /// distance from the start of the source.
     ///
@@ -278,8 +275,7 @@ impl<'src> PartialOrd for Position<'src> {
     }
 }
 
-/// This must be implemented manually because `Chars` doesn't implement `Ord`
-impl<'src> Ord for Position<'src> {
+impl Ord for Position<'_> {
     /// Returns the natural ordering between two positions based on their
     /// distance from the start of the source.
     ///
@@ -292,13 +288,13 @@ impl<'src> Ord for Position<'src> {
     }
 }
 
-impl<'src> Debug for Position<'src> {
+impl Debug for Position<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "Position {{ src: \"{}\", line_index: {}, col_index: {} }}", self.src.name, self.line_index, self.col_index)
     }
 }
 
-impl<'src> Display for Position<'src> {
+impl Display for Position<'_> {
     /// Display the current position in a human-readable format, including the
     /// name of the source text, and the position's line and column numbers.
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
@@ -312,10 +308,10 @@ impl<'src> Display for Position<'src> {
 // Source Spans //
 //==============//
 
-/// Represents a substring within the text of a Source.
+/// Represents a substring within the text of a `Source` object.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Span<'src> {
-    /// The Source within which the substring lives
+    /// The `Source` object within which the substring lives
     src: &'src Source<'src>,
     
     /// The starting position of the substring. This is inclusive, so whatever
@@ -347,7 +343,8 @@ impl<'src> Span<'src> {
         Span { src: pos.src, start: pos.clone(), end: pos }
     }
     
-    /// Returns the union of two spans, i.e. the smallest span containing them both.
+    /// Returns the union of two spans, i.e. the smallest span containing them
+    /// both.
     ///
     /// Note that the union of an arbitrary span `a` with an empty (zero length)
     /// span `b` won't necessarily return a span equivalent to `a`. This is
@@ -402,7 +399,7 @@ impl<'src> Span<'src> {
     /// Returns a vector of strings for each line of the span.
     #[must_use]
     pub fn get_lines(&self) -> Vec<(usize, &'src str)> {
-        (self.start.line_index .. self.end.line_index + 1)
+        (self.start.line_index ..= self.end.line_index)
             .zip(self.src.text[self.start.line_byte ..].lines())
             .collect()
     }
@@ -471,8 +468,8 @@ impl<'src> Span<'src> {
         strings
     }
     
-    /// Alternative form of <Self as Display>::fmt that formats this span with a
-    /// specified indentation.
+    /// Alternative form of `<Self as Display>::fmt` that formats this span with
+    /// a specified indentation.
     pub fn fmt_indented(&self, f: &mut Formatter, indent: usize) -> std::fmt::Result {
         for line in self.get_formatted_lines() {
             write!(f, "{:>indent$}{}", "", line)?;
@@ -481,13 +478,13 @@ impl<'src> Span<'src> {
     }
 }
 
-impl<'src> Debug for Span<'src> {
+impl Debug for Span<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "Span {{ start: {}, end: {} }}", self.start, self.end)
     }
 }
 
-impl<'src> Display for Span<'src> {
+impl Display for Span<'_> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{} from {} to {}", self.src, self.start, self.end)
     }
@@ -561,7 +558,7 @@ impl<'src> Reader<'src> {
     
     /// Returns the character at the current position if it exists.
     fn peek(&self) -> Option<char> {
-        self.chars.peek().cloned()
+        self.chars.peek().copied()
     }
     
     /// TODO

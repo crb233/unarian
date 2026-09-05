@@ -9,12 +9,6 @@ use crate::pattern::Pattern;
 //=========================//
 
 /// Comment start string
-pub const CHAR_COMMENT_START   : char = '#';
-
-/// Comment stop string
-pub const CHAR_COMMENT_STOP    : char = '\n';
-
-/// Comment start string
 pub const STRING_COMMENT_START : &str = "#";
 
 /// Comment stop string
@@ -73,28 +67,35 @@ pub enum TokenKind {
     OpenBrace,
     CloseBrace,
     Alternation,
-    Compound,
+    Identifier,
     Atomic(AtomicKind),
 }
 
 impl TokenKind {
     /// TODO
-    fn get_closing_pair(&self) -> Option<TokenKind> {
-        match self {
-            TokenKind::Start      => Some(TokenKind::End),
-            TokenKind::OpenBrace  => Some(TokenKind::CloseBrace),
-            _ => None,
-        }
+    #[must_use]
+    fn is_opening_pair(self) -> bool {
+        matches!(self, TokenKind::Start | TokenKind::OpenBrace)
     }
     
     /// TODO
-    fn is_closing_pair(&self) -> bool {
+    #[must_use]
+    fn is_closing_pair(self) -> bool {
         matches!(self, TokenKind::End | TokenKind::CloseBrace)
     }
     
     /// TODO
     #[must_use]
-    fn from_span<'src>(span: &Span<'src>) -> Self {
+    fn is_matching_pair(self, other: Self) -> bool {
+        matches!((self, other),
+            (TokenKind::Start, TokenKind::End) |
+            (TokenKind::OpenBrace, TokenKind::CloseBrace)
+        )
+    }
+    
+    /// TODO
+    #[must_use]
+    fn from_span(span: &Span<'_>) -> Self {
         match span.get_str() {
             STRING_OPEN_BRACE  => TokenKind::OpenBrace,
             STRING_CLOSE_BRACE => TokenKind::CloseBrace,
@@ -109,12 +110,34 @@ impl TokenKind {
                 if STRING_COMMENT_START.matches_start(string) {
                     TokenKind::Comment
                 } else {
-                    TokenKind::Compound
+                    TokenKind::Identifier
                 }
             }
         }
     }
 }
+
+impl std::fmt::Display for TokenKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            TokenKind::Start => write!(f, "Start"),
+            TokenKind::End => write!(f, "End"),
+            TokenKind::Comment => write!(f, "Comment"),
+            TokenKind::OpenBrace => write!(f, "OpenBrace"),
+            TokenKind::CloseBrace => write!(f, "CloseBrace"),
+            TokenKind::Alternation => write!(f, "Alternation"),
+            TokenKind::Identifier => write!(f, "Identifier"),
+            TokenKind::Atomic(AtomicKind::Increment) => write!(f, "Atomic(Increment)"),
+            TokenKind::Atomic(AtomicKind::Decrement) => write!(f, "Atomic(Decrement)"),
+            TokenKind::Atomic(AtomicKind::Random) => write!(f, "Atomic(Random)"),
+            TokenKind::Atomic(AtomicKind::Input) => write!(f, "Atomic(Input)"),
+            TokenKind::Atomic(AtomicKind::Output) => write!(f, "Atomic(Output)"),
+            TokenKind::Atomic(AtomicKind::Trace) => write!(f, "Atomic(Trace)"),
+        }
+    }
+}
+
+
 
 /// TODO
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -147,6 +170,25 @@ impl<'src> Token<'src> {
     pub fn get_str(&self) -> &str {
         self.span.get_str()
     }
+    
+    /// TODO
+    #[must_use]
+    fn is_opening_pair(&self) -> bool {
+        self.kind.is_opening_pair()
+    }
+    
+    /// TODO
+    #[must_use]
+    fn is_closing_pair(&self) -> bool {
+        self.kind.is_closing_pair()
+    }
+    
+    /// TODO
+    #[must_use]
+    fn is_matching_pair(&self, other: &Self) -> bool {
+        self.kind.is_matching_pair(other.kind)
+    }
+    
 }
 
 
@@ -165,7 +207,7 @@ pub struct TokenStream<'src> {
 /// TODO
 /// 
 /// TODO: Maybe don't return tokens for the start and end of the stream. Then
-/// also remove TokenKind::Start and TokenKind::End
+/// also remove `TokenKind::Start` and `TokenKind::End`
 impl<'src> TokenStream<'src> {
     /// TODO
     #[must_use]
@@ -191,7 +233,7 @@ impl<'src> TokenStream<'src> {
         }
         
         // skip whitespace
-        self.reader.skip_while(&|c: char| c.is_whitespace());
+        self.reader.skip_while(|c: char| c.is_whitespace());
         
         // check for end of input
         if self.reader.is_at_end() {
@@ -201,12 +243,12 @@ impl<'src> TokenStream<'src> {
         
         // check for a comment
         if self.reader.starts_with(STRING_COMMENT_START) {
-            let span = self.reader.read_until_after(STRING_COMMENT_STOP);
+            let span = self.reader.read_until(STRING_COMMENT_STOP);
             return Some(Token::new(TokenKind::Comment, span));
         }
         
         // must be an identifier
-        let span = self.reader.read_until(&|c: char| {
+        let span = self.reader.read_until(|c: char| {
             // TODO this isn't portable / compatible with STRING_COMMENT_START
             c.is_whitespace() || c == '#'
         });
@@ -223,7 +265,7 @@ impl<'src> Iterator for TokenStream<'src> {
     }
 }
 
-impl<'src> PeekableIterator for TokenStream<'src> {
+impl PeekableIterator for TokenStream<'_> {
     /// TODO
     fn peek(&self) -> Option<&<Self as Iterator>::Item> {
         self.token.as_ref()
@@ -292,15 +334,16 @@ impl<'src> TokenTree<'src> {
     }
     
     /// TODO
-    fn from_token_stream(tokens: &mut TokenStream<'src>) -> Result<TokenTree<'src>, TokenTreeError<'src>> {
+    #[must_use]
+    pub fn from_token_stream(tokens: &mut TokenStream<'src>) -> Result<TokenTree<'src>, TokenTreeError<'src>> {
         if let Some(token) = tokens.next() {
-            if token.kind.is_closing_pair() {
+            if token.is_closing_pair() {
                 Err(TokenTreeError::UnmatchedClosingBrace(token.span))
-            } else if let Some(close_kind) = token.kind.get_closing_pair() {
+            } else if token.is_opening_pair() {
                 let open = token;
                 let mut contents = Vec::new();
                 loop {
-                    if tokens.peek().is_some_and(|tok| tok.kind == close_kind) {
+                    if tokens.peek().is_some_and(|tok| open.is_matching_pair(tok)) {
                         break;
                     }
                     match Self::from_token_stream(tokens) {
@@ -317,5 +360,28 @@ impl<'src> TokenTree<'src> {
         } else {
             Err(TokenTreeError::MissingTokenTree)
         }
+    }
+    
+    fn fmt_indented(&self, indent: usize, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let width: usize = 4 * indent;
+        match self {
+            TokenTree::Token(token) => {
+                writeln!(f, "{:>width$}\"{}\" ({})", "", token.get_str(), token.kind)
+            }
+            TokenTree::Group { open, close, contents } => {
+                writeln!(f, "{:>width$}\"{}\" ({})", "", open.get_str(), open.kind)?;
+                for subtree in contents {
+                    subtree.fmt_indented(indent + 1, f)?;
+                }
+                writeln!(f, "{:>width$}\"{}\" ({})", "", close.get_str(), close.kind)?;
+                Ok(())
+            }
+        }
+    }
+}
+
+impl std::fmt::Display for TokenTree<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+       self.fmt_indented(0, f)
     }
 }
