@@ -125,13 +125,13 @@ impl<'s> Source<'s> {
         Ok(Source::new(name, text))
     }
     
-    /// TODO
+    /// DOC
     #[must_use]
     pub fn str(&self) -> &str {
         self.text.borrow()
     }
     
-    /// TODO
+    /// DOC
     /// 
     /// # Safety
     /// 
@@ -389,7 +389,7 @@ impl<'src> Span<'src> {
     /// Note that this function counts Unicode characters and doesn't account
     /// for groups of such characters that form a single grapheme.
     ///
-    /// TODO Maybe fix this
+    /// TODO: Maybe fix this
     #[must_use]
     pub fn num_chars(&self) -> usize {
         self.end.char_index - self.start.char_index
@@ -505,7 +505,7 @@ impl Display for Span<'_> {
 // Source Reader //
 //===============//
 
-/// TODO
+/// DOC
 #[derive(Debug, Clone)]
 pub struct Reader<'src> {
     /// The source text to read.
@@ -570,38 +570,38 @@ impl<'src> Reader<'src> {
         self.chars.peek().copied()
     }
     
-    /// TODO
+    /// DOC
     #[must_use]
     pub fn is_at_start(&self) -> bool {
         self.pos.char_byte == 0
     }
     
-    /// TODO
+    /// DOC
     #[must_use]
     pub fn is_at_end(&self) -> bool {
         self.peek().is_none()
     }
     
-    /// TODO
+    /// DOC
     #[must_use]
     fn remainder(&self) -> &'src str {
         unsafe { self.src.str_slice(self.pos.char_byte, self.src.text.len()) }
     }
     
-    /// TODO
+    /// DOC
     #[must_use]
     pub fn starts_with<P: Pattern>(&mut self, pattern: P) -> bool {
         pattern.prefix_length_of(self.remainder()).is_some()
     }
     
-    /// TODO
+    /// DOC
     pub fn skip_once<P: Pattern>(&mut self, pattern: P) {
         if let Some(n) = pattern.prefix_length_of(self.remainder()) {
             self.move_forward(n);
         }
     }
     
-    /// TODO
+    /// DOC
     /// 
     /// TODO: Consider changing the name so that it doesn't conflict with
     /// `Iterator::skip_while` and then we can implement `Iterator` for `Reader`
@@ -612,7 +612,7 @@ impl<'src> Reader<'src> {
         }
     }
     
-    /// TODO
+    /// DOC
     pub fn skip_until<P: Pattern + Copy>(&mut self, pattern: P) {
         while pattern.prefix_length_of(self.remainder()).is_none() {
             if self.next().is_none() {
@@ -621,9 +621,9 @@ impl<'src> Reader<'src> {
         }
     }
     
-    /// TODO
+    /// DOC
     /// 
-    /// TODO should this fail if we don't eventually match the pattern?
+    /// TODO: should this fail if we don't eventually match the pattern?
     pub fn skip_until_after<P: Pattern + Copy>(&mut self, pattern: P) {
         loop {
             if let Some(n) = pattern.prefix_length_of(self.remainder()) {
@@ -636,7 +636,7 @@ impl<'src> Reader<'src> {
         }
     }
     
-    /// TODO
+    /// DOC
     #[must_use]
     pub fn read_once<P: Pattern>(&mut self, pattern: P) -> Option<Span<'src>> {
         if let Some(n) = pattern.prefix_length_of(self.remainder()) {
@@ -647,7 +647,7 @@ impl<'src> Reader<'src> {
         None
     }
     
-    /// TODO
+    /// DOC
     #[must_use]
     pub fn read_while<P: Pattern + Copy>(&mut self, pattern: P) -> Vec<Span<'src>> {
         let mut matches = Vec::new();
@@ -659,7 +659,7 @@ impl<'src> Reader<'src> {
         matches
     }
     
-    /// TODO
+    /// DOC
     #[must_use]
     pub fn read_until<P: Pattern + Copy>(&mut self, pattern: P) -> Span<'src> {
         let start = self.pos.clone();
@@ -667,9 +667,9 @@ impl<'src> Reader<'src> {
         Span::new(start, self.pos.clone())
     }
     
-    /// TODO
+    /// DOC
     /// 
-    /// TODO should this fail if we don't eventually match the pattern?
+    /// TODO: should this fail if we don't eventually match the pattern?
     #[must_use]
     pub fn read_until_after<P: Pattern + Copy>(&mut self, pattern: P) -> Span<'src> {
         let start = self.pos.clone();
