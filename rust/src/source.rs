@@ -1,4 +1,5 @@
 use std::borrow::{Borrow, Cow};
+use std::cell::{OnceCell, RefCell};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
 use std::path::Path;
@@ -28,15 +29,26 @@ pub trait PeekableIterator: Iterator {
 
 /// Wraps an arbitrary iterator that makes it peekable.
 /// 
-/// This is almost identical to `std::iter::Peekable`, except that we don't
-/// need a mutable reference to peek at the next item. The advantage of
-/// `std::iter::Peekable` is that it's lazy and won't compute the next item
-/// until absolutely necessary.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// This is almost identical to `std::iter::Peekable`, except that we don't need
+/// a mutable reference to peek at the next item. Both implementations are lazy
+/// and will only compute the next item when necessary. The advantage of
+/// `std::iter::Peekable` is that it has slightly lower overhead.
+/// 
+/// It seems like any implementation of a peekable iterator wrapper can have at
+/// most two of the following three properties:
+/// 1. immutable peeks, i.e. we don't need a mutable reference to peek at the
+///    next value;
+/// 2. laziness, i.e. we only compute the next item when that item is required;
+/// 3. zero-overhead, i.e. we don't need extra runtime checks.
+/// 
+/// The standard implementation chooses propeties 2 and 3. This implementation
+/// chooses properties 1 and 2. It's also easy to make an implementation with
+/// properties 1 and 3.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Peekable<I>
 where I: Iterator {
-    current: Option<I::Item>,
-    iterator: I,
+    current: OnceCell<Option<I::Item>>,
+    iterator: RefCell<I>,
 }
 
 impl<I> Peekable<I>
@@ -44,8 +56,15 @@ where I: Iterator {
     /// Creates and returns a new `Peekable` from the given iterator.
     #[must_use]
     pub fn new(mut iterator: I) -> Self {
-        let current = iterator.next();
-        Self { current, iterator }
+        Self {
+            current: OnceCell::new(),
+            iterator: RefCell::new(iterator),
+        }
+    }
+    
+    /// DOC
+    fn ensure_current(&self) {
+        self.current.get_or_init(|| self.iterator.borrow_mut().next());
     }
 }
 
@@ -55,7 +74,9 @@ where I: Iterator {
     type Item = I::Item;
     
     fn next(&mut self) -> Option<Self::Item> {
-        std::mem::replace(&mut self.current, self.iterator.next())
+        self.ensure_current();
+        // unwrap() is safe because we just ensured a current value exists
+        self.current.take().unwrap()
     }
 }
 
@@ -63,21 +84,23 @@ where I: Iterator {
 impl<I> PeekableIterator for Peekable<I>
 where I: Iterator {
     fn peek(&self) -> Option<&<Self as Iterator>::Item> {
-        self.current.as_ref()
+        self.ensure_current();
+        // unwrap() is safe because we just ensured a current value exists
+        self.current.get().unwrap().as_ref()
     }
 }
 
-/// This trait adds a method that transforms any iterator into a `Peekable`.
-pub trait IntoPeekable: Sized + Iterator {
+/// This trait adds a method that creates peekable iterators.
+pub trait IntoPeekable: IntoIterator {
     #[must_use]
-    fn into_peekable(self) -> Peekable<Self>;
+    fn into_peekable(self) -> Peekable<<Self as IntoIterator>::IntoIter>;
 }
 
-/// Implement for all iterators.
+/// Implement for everything that can be made into an iterator.
 impl<I> IntoPeekable for I
-where I: Iterator {
-    fn into_peekable(self) -> Peekable<Self> {
-        Peekable::new(self)
+where I: IntoIterator {
+    fn into_peekable(self) -> Peekable<<Self as IntoIterator>::IntoIter> {
+        Peekable::new(self.into_iter())
     }
 }
 
