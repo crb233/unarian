@@ -5,7 +5,7 @@
     - [ ] command `help` or `--help` or `-h` prints a help message
     - [ ] command `run` compiles internally and immediately runs
     - [ ] command `check` checks for compilation errors
-    - [ ] command `build` compiles to bytecode
+    - [ ] command `build` compiles to bytecode, Rust, or C
     - [ ] command `format` formats the library source code
     - [ ] command `interact` or `repl` enters an interactive REPL
     - [ ] no command also enters an interactive REPL
@@ -14,11 +14,14 @@
     - [ ] `run` argument `--expr` or `-e` receives a single expression to be evaluated
     - [ ] `run` argument `--input` or `-i` receives a list of input integers; otherwise, read from stdin
     - [ ] `run` flag `--stdin` or `-s` means to read input integers from stdin
-    - [ ] `build` argument `--output` or `-o` receives a single output path for compilation
+    - [ ] `build` argument `--output` or `-o` receives a single output path for compilation, and if not otherwise specified, the output format is chosen based on the file extension of the output path (`.unb` for bytecode, `.rs` for Rust, and `.c` for C)
+    - [ ] `build` argument `--to` or `-t` receives a single name of a valid output format (`bytecode`, `c`, or `rust`)
     - [ ] `format` argument `--output` or `-o` receives a single output path for formatting; if specified, then all libraries will be combined into one output
     - [ ] `format` flag `--inplace` means to format all libraries in-place
     - [ ] `format` flag `--minimize` or `-m` means to minimize the code as much as possible
     - [ ] `format` flag ...
+    - [ ] argument for sorting errors and warnings by position or priority
+    - [ ] argument for which (if any) warnings to show
 - [ ] parsing
     - [x] from text to token stream
     - [x] from token stream to token tree
@@ -33,7 +36,7 @@
 - [ ] optimization
     - [ ] tail-call optimization
     - [ ] identify common functions (multiplication, division, ...etc.)
-- [ ] execution
+- [ ] interpreted execution
     - [ ] increment `+` and decrement `-`
     - [ ] compound function calls
     - [ ] composition
@@ -42,7 +45,7 @@
     - [ ] input `?`
     - [ ] output `!`
     - [ ] trace `@`
-- [ ] bytecode
+- [ ] compilation
     - [ ] increment `+` and decrement `-`
     - [ ] compound function calls
     - [ ] composition
@@ -51,11 +54,17 @@
     - [ ] input `?`
     - [ ] output `!`
     - [ ] trace `@`
+    - [ ] common function optimizations (multiplication, division, ...etc.)
+    - [ ] output to bytecode
+    - [ ] output to Rust
+    - [ ] output to C
 - [ ] interactive mode
     - [ ] distinguish commands from declarations
     - [ ] 'evaluate' command for evaluating an expression on input
     - [ ] 'import' command for importing a library from a file
     - [ ] 'erase' command for deleting function declarations
     - [ ] 'dependencies' command for viewing the dependency tree of a function
-    - [ ] allow multi-line inputs
+    - [ ] allow manual multi-line inputs
+    - [ ] allow automatic multi-line inputs when brackets aren't matched
+    - [ ] allow automatic indentation for multi-line inputs
 - [ ] testing

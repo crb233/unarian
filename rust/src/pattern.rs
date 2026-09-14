@@ -104,6 +104,51 @@ unsafe impl Pattern for Alphanumeric {
 }
 
 #[derive(Clone, Copy)]
+pub struct Not<'a>(pub &'a dyn Pattern);
+
+unsafe impl<'a> Pattern for Not<'a> {
+    fn prefix_length_of(&self, haystack: &str) -> Option<usize> {
+        let result = self.0.prefix_length_of(haystack);
+        match result {
+            Some(_) => None,
+            None => Some(0),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct Repeat<'a>(pub &'a dyn Pattern);
+
+unsafe impl<'a> Pattern for Repeat<'a> {
+    fn prefix_length_of(&self, haystack: &str) -> Option<usize> {
+        let mut offset: usize = 0;
+        while let Some(n) = self.0.prefix_length_of(&haystack[offset..]) {
+            offset += n;
+        }
+        Some(offset)
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct RepeatAtLeast<'a>(pub &'a dyn Pattern, usize);
+
+unsafe impl<'a> Pattern for RepeatAtLeast<'a> {
+    fn prefix_length_of(&self, haystack: &str) -> Option<usize> {
+        let mut offset: usize = 0;
+        let mut matches: usize = 0;
+        while let Some(n) = self.0.prefix_length_of(&haystack[offset..]) {
+            offset += n;
+            matches += 1;
+        }
+        if matches >= self.1 {
+            Some(offset)
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
 pub struct Any<'a>(pub &'a [&'a dyn Pattern]);
 
 unsafe impl<'a> Pattern for Any<'a> {

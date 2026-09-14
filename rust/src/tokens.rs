@@ -1,12 +1,11 @@
 use crate::source::{PeekableIterator, Position, Reader, Source, Span};
-use crate::pattern::{self, Any, Whitespace};
-use crate::pattern::Pattern;
+use crate::pattern::{Any, Pattern, Whitespace, Repeat};
 
 
 
-//=========================//
-// Constants and Utilities //
-//=========================//
+//==================//
+// String Constants //
+//==================//
 
 /// Comment start
 pub const STRING_COMMENT_START : &str = "#";
@@ -61,6 +60,7 @@ pub enum AtomicKind {
 /// DOC
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
+    Whitespace,
     Comment,
     OpenBrace,
     CloseBrace,
@@ -117,17 +117,18 @@ impl TokenKind {
 impl std::fmt::Display for TokenKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            TokenKind::Comment => write!(f, "Comment"),
-            TokenKind::OpenBrace => write!(f, "OpenBrace"),
-            TokenKind::CloseBrace => write!(f, "CloseBrace"),
-            TokenKind::Alternation => write!(f, "Alternation"),
-            TokenKind::Compound => write!(f, "Compound"),
-            TokenKind::Atomic(AtomicKind::Increment) => write!(f, "Atomic(Increment)"),
-            TokenKind::Atomic(AtomicKind::Decrement) => write!(f, "Atomic(Decrement)"),
-            TokenKind::Atomic(AtomicKind::Random) => write!(f, "Atomic(Random)"),
-            TokenKind::Atomic(AtomicKind::Input) => write!(f, "Atomic(Input)"),
-            TokenKind::Atomic(AtomicKind::Output) => write!(f, "Atomic(Output)"),
-            TokenKind::Atomic(AtomicKind::Trace) => write!(f, "Atomic(Trace)"),
+            Self::Whitespace => write!(f, "Whitespace"),
+            Self::Comment => write!(f, "Comment"),
+            Self::OpenBrace => write!(f, "OpenBrace"),
+            Self::CloseBrace => write!(f, "CloseBrace"),
+            Self::Alternation => write!(f, "Alternation"),
+            Self::Compound => write!(f, "Compound"),
+            Self::Atomic(AtomicKind::Increment) => write!(f, "Atomic(Increment)"),
+            Self::Atomic(AtomicKind::Decrement) => write!(f, "Atomic(Decrement)"),
+            Self::Atomic(AtomicKind::Random) => write!(f, "Atomic(Random)"),
+            Self::Atomic(AtomicKind::Input) => write!(f, "Atomic(Input)"),
+            Self::Atomic(AtomicKind::Output) => write!(f, "Atomic(Output)"),
+            Self::Atomic(AtomicKind::Trace) => write!(f, "Atomic(Trace)"),
         }
     }
 }
@@ -183,7 +184,6 @@ impl<'src> Token<'src> {
     fn is_matching_pair(&self, other: &Self) -> bool {
         self.kind.is_matching_pair(other.kind)
     }
-    
 }
 
 
@@ -222,13 +222,14 @@ impl<'src> TokenStream<'src> {
     
     /// DOC
     fn next_token(&mut self) -> Option<Token<'src>> {
-        // skip whitespace
-        self.reader.skip_while(|c: char| c.is_whitespace());
-        
         // check for end of input
         if self.reader.is_at_end() {
-            let span = Span::from_position(self.reader.position().clone());
             return None;
+        }
+        
+        // check for whitespace
+        if let Some(span) = self.reader.read_once(Repeat(&Whitespace)) {
+            return Some(Token::new(TokenKind::Whitespace, span));
         }
         
         // check for a comment
@@ -305,7 +306,7 @@ impl<'src> TokenTree<'src> {
         match self {
             TokenTree::Token(tok) => tok.span.clone(),
             TokenTree::Group { open, close, .. } =>
-                Span::union(&open.span, &close.span),
+                Span::union([&open.span, &close.span]),
         }
     }
     
@@ -335,6 +336,12 @@ impl std::fmt::Display for TokenTree<'_> {
     }
 }
 
+
+
+//====================//
+// Token Tree Streams //
+//====================//
+
 /// DOC
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenTreeError<'src> {
@@ -343,9 +350,6 @@ pub enum TokenTreeError<'src> {
 }
 
 /// DOC
-/// 
-/// TODO: This could easily be modified to be peekable, but is that really
-/// necessary?
 #[derive(Debug, Clone)]
 pub struct TokenTreeStream<'src> {
     token_stream: TokenStream<'src>,
@@ -369,10 +373,6 @@ impl<'src> TokenTreeStream<'src> {
     pub fn from_source(source: &'src Source<'src>) -> Self {
         Self::from_reader(Reader::new(source))
     }
-}
-
-impl<'src> Iterator for TokenTreeStream<'src> {
-    type Item = Result<TokenTree<'src>, TokenTreeError<'src>>;
     
     /// DOC
     /// 
@@ -382,7 +382,7 @@ impl<'src> Iterator for TokenTreeStream<'src> {
     /// 
     /// TODO: As currently implemented, we can continue building token trees
     /// even after the last one failed. Is this acceptable behavior?
-    fn next(&mut self) -> Option<Self::Item> {
+    fn next_token_tree(&mut self) -> Option<Result<TokenTree<'src>, TokenTreeError<'src>>> {
         let token = self.token_stream.next()?;
         if token.is_closing_pair() {
             return Some(Err(TokenTreeError::UnmatchedClosingBrace(token.span)));
@@ -405,5 +405,13 @@ impl<'src> Iterator for TokenTreeStream<'src> {
         };
         let close = self.token_stream.next().expect("peek() returned Some(_) so next() should also");
         Some(Ok(TokenTree::Group { open, close, contents }))
+    }
+}
+
+impl<'src> Iterator for TokenTreeStream<'src> {
+    type Item = Result<TokenTree<'src>, TokenTreeError<'src>>;
+    
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next_token_tree()
     }
 }

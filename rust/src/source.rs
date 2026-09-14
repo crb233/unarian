@@ -9,6 +9,23 @@ use crate::pattern::Pattern;
 
 
 
+enum CompileErrorSeverity {
+    Warning,
+    Error,
+}
+
+struct LabeledSpan<'src> {
+    label: Option<String>,
+    span: Span<'src>,
+}
+
+struct CompileError<'src> {
+    severity: CompileErrorSeverity,
+    spans: Vec<LabeledSpan<'src>>,
+}
+
+
+
 //================//
 // Misc Utilities //
 //================//
@@ -25,9 +42,15 @@ pub trait PeekableIterator: Iterator {
     /// Peeks at the next item in the iterator without advancing it.
     #[must_use]
     fn peek(&self) -> Option<&<Self as Iterator>::Item>;
+    
+    /// Checks if this iterator has a next item.
+    #[must_use]
+    fn has_next(&self) -> bool {
+        self.peek().is_some()
+    }
 }
 
-/// Wraps an arbitrary iterator that makes it peekable.
+/// Wraps an arbitrary iterator to make it peekable.
 /// 
 /// This is almost identical to `std::iter::Peekable`, except that we don't need
 /// a mutable reference to peek at the next item. Both implementations are lazy
@@ -64,6 +87,8 @@ where I: Iterator {
     
     /// DOC
     fn ensure_current(&self) {
+        // `borrow_mut()` is safe because no borrows outlive the functions they're
+        // called in, so we're guaranteed that `iterator` isn't already borrowed
         self.current.get_or_init(|| self.iterator.borrow_mut().next());
     }
 }
@@ -75,8 +100,17 @@ where I: Iterator {
     
     fn next(&mut self) -> Option<Self::Item> {
         self.ensure_current();
-        // unwrap() is safe because we just ensured a current value exists
+        // `unwrap()` is safe because we just ensured a current value exists
         self.current.take().unwrap()
+    }
+    
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let (mut low, mut high) = self.iterator.borrow().size_hint();
+        if self.current.get().is_some() {
+            low = low.saturating_add(1);
+            high = high.and_then(|x| x.checked_add(1));
+        }
+        (low, high)
     }
 }
 
@@ -85,7 +119,7 @@ impl<I> PeekableIterator for Peekable<I>
 where I: Iterator {
     fn peek(&self) -> Option<&<Self as Iterator>::Item> {
         self.ensure_current();
-        // unwrap() is safe because we just ensured a current value exists
+        // `unwrap()` is safe because we just ensured a current value exists
         self.current.get().unwrap().as_ref()
     }
 }
@@ -326,7 +360,7 @@ impl Display for Position<'_> {
     /// Display the current position in a human-readable format, including the
     /// name of the source text, and the position's line and column numbers.
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "{} at {}:{}", self.src.name, self.line_number(), self.col_number())
+        write!(f, "\"{}\" at {}:{}", self.src.name, self.line_number(), self.col_number())
     }
 }
 
@@ -336,10 +370,24 @@ impl Display for Position<'_> {
 // Source Spans //
 //==============//
 
+#[derive(Clone, PartialEq, Eq)]
+enum SpanData<'src> {
+    Empty,
+    NonEmpty {
+        start: Position<'src>,
+        end: Position<'src>,
+    }
+}
+
 /// Represents a substring within the text of a `Source` object.
+/// 
+/// TODO: Consider replacing the fields `start` and `end` with a new field
+/// `data: SpanData` as defined above.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Span<'src> {
     /// The `Source` object within which the substring lives
+    /// 
+    /// TODO: This is duplicate information, since it also lives in `start` and `end`
     src: &'src Source<'src>,
     
     /// The starting position of the substring. This is inclusive, so whatever
@@ -380,9 +428,25 @@ impl<'src> Span<'src> {
     ///
     /// # Panics
     ///
-    /// - Panics if the two spans come from different sources.
+    /// - Panics if any two spans come from different sources.
+    /// - Panics if the input slice of spans is empty.
     #[must_use]
-    pub fn union(a: &Span<'src>, b: &Span<'src>) -> Span<'src> {
+    pub fn union<'a, I>(spans: I) -> Span<'src>
+    where 'src: 'a, I: IntoIterator<Item = &'a Span<'src>> {
+        let mut spans = spans.into_iter();
+        let mut result = match spans.next() {
+            Some(first_span) => first_span.clone(),
+            None => panic!("A union of spans requires at least one span."),
+        };
+        for span in spans {
+            result = Span::pair_union(&result, span);
+        }
+        result
+    }
+    
+    /// DOC
+    #[must_use]
+    pub fn pair_union(a: &Span<'src>, b: &Span<'src>) -> Span<'src> {
         assert_eq!(a.src, b.src, "A union can only be formed with spans from the same source.");
         let start = if a.start <= b.start { a.start.clone() } else { b.start.clone() };
         let end = if a.end >= b.end { a.end.clone() } else { b.end.clone() };
@@ -450,6 +514,10 @@ impl<'src> Span<'src> {
     /// TODO: Does it make sense for spans to ignore comments? This would
     /// increase the complexity of this code since it would have to detect
     /// comments.
+    /// 
+    /// TODO: Include an option "ascii" that ensures output is ASCII.
+    /// 
+    /// TODO: Allow for rich-text output with text styling (bold) and colors.
     #[must_use]
     pub fn formatted_lines(&self) -> Vec<String> {
         let lines = self.lines();
