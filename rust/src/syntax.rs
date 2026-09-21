@@ -1,14 +1,6 @@
 use crate::source::{IntoPeekable, PeekableIterator, Position, Span};
 use crate::tokens::{AtomicKind, STRING_COMMENT_START, Token, TokenKind, TokenTree, TokenTreeStream};
-
-
-
-/// DOC
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SyntaxTreeError<'src> {
-    ExpectedCompoundFunctionIdentifier(TokenTree<'src>),
-    ExpectedCompoundFunctionDefinition(TokenTree<'src>),
-}
+use crate::message::Message;
 
 
 
@@ -121,7 +113,7 @@ impl<'src> Composition<'src> {
     }
     
     /// DOC
-    fn next_from<I>(token_trees: &mut I) -> Option<Result<Self, SyntaxTreeError<'src>>>
+    fn next_from<I>(token_trees: &mut I) -> Option<Result<Self, Message<'src>>>
     where I: PeekableIterator<Item = TokenTree<'src>> {
         todo!()
     }
@@ -155,7 +147,7 @@ impl<'src> Alternation<'src> {
     }
     
     /// DOC
-    fn next_from<I>(token_trees: &mut I) -> Option<Result<Self, SyntaxTreeError<'src>>>
+    fn next_from<I>(token_trees: &mut I) -> Option<Result<Self, Message<'src>>>
     where I: PeekableIterator<Item = TokenTree<'src>> {
         todo!()
     }
@@ -187,7 +179,7 @@ impl<'src> Group<'src> {
         todo!()
     }
     
-    fn next_from<I>(token_trees: &mut I) -> Option<Result<Self, SyntaxTreeError<'src>>>
+    fn next_from<I>(token_trees: &mut I) -> Option<Result<Self, Message<'src>>>
     where I: PeekableIterator<Item = TokenTree<'src>> {
         todo!()
     }
@@ -231,22 +223,22 @@ pub struct Declaration<'src> {
 }
 
 impl<'src> Declaration<'src> {
-    fn next_from<I>(token_trees: &mut I) -> Option<Result<Self, SyntaxTreeError<'src>>>
+    fn next_from<I>(token_trees: &mut I) -> Option<Result<Self, Message<'src>>>
     where I: PeekableIterator<Item = TokenTree<'src>> {
         let comments = Comments::next_from(token_trees);
         let name = match token_trees.next() {
             Some(TokenTree::Token(Token { kind: TokenKind::Compound, span })) =>
                 Compound::new(span),
-            Some(tree) =>
-                return Some(Err(SyntaxTreeError::ExpectedCompoundFunctionIdentifier(tree))),
+            Some(tree) => todo!(),
+                // return Some(Err(Message::ExpectedCompoundFunctionIdentifier { tree.span() })),
             None =>
                 return None,
         };
         let definition = match token_trees.next() {
             Some(TokenTree::Group { open, close, contents }) =>
                 Group::from_token_tree_group(open, close, contents),
-            Some(tree) =>
-                return Some(Err(SyntaxTreeError::ExpectedCompoundFunctionIdentifier(tree))),
+            Some(tree) => todo!(),
+                // return Some(Err(Message::ExpectedCompoundFunctionIdentifier { tree.span() })),
             None =>
                 todo!(),
         };
@@ -267,12 +259,34 @@ pub struct Library<'src> {
 }
 
 impl<'src> Library<'src> {
-    pub fn from_token_trees(token_trees: Vec<TokenTree<'src>>) -> Result<Self, SyntaxTreeError<'src>> {
+    pub fn from_token_trees(token_trees: Vec<TokenTree<'src>>) -> Result<Self, Message<'src>> {
         Self::next_from(&mut token_trees.into_peekable())
     }
     
-    pub fn next_from<I>(token_trees: &mut I) -> Result<Self, SyntaxTreeError<'src>>
+    pub fn next_from<I>(token_trees: &mut I) -> Result<Self, Message<'src>>
     where I: PeekableIterator<Item = TokenTree<'src>> {
         todo!()
     }
 }
+
+
+
+
+
+// struct Parser<'src> {
+//     // TODO
+// }
+// 
+// impl Parser {
+//     // TODO branching and error reporting functions
+// }
+// 
+// trait Parseable {
+//     fn parse<'src>(parser: &mut Parser<'src>) -> Option<Self>;
+// }
+// 
+// impl<'src> Parseable for Library<'src> {
+//     fn parse(parser: &mut Parser) -> Option<Self> {
+//         parser.
+//     }
+// }

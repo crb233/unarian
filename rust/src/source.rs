@@ -9,23 +9,6 @@ use crate::pattern::Pattern;
 
 
 
-enum CompileErrorSeverity {
-    Warning,
-    Error,
-}
-
-struct LabeledSpan<'src> {
-    label: Option<String>,
-    span: Span<'src>,
-}
-
-struct CompileError<'src> {
-    severity: CompileErrorSeverity,
-    spans: Vec<LabeledSpan<'src>>,
-}
-
-
-
 //================//
 // Misc Utilities //
 //================//
@@ -216,6 +199,11 @@ impl Display for Source<'_> {
 //==================//
 
 /// Represents a character position within the text of a `Source` object.
+/// 
+/// TODO: Consider significantly reducing the size of this structure by removing
+/// `line_byte`, `char_index`, `line_index`, and `col_index` and adding new
+/// functionality to `Source` for recovering these things from only `char_byte`.
+/// If so, `Position` should implement `Copy`.
 #[derive(Clone)]
 pub struct Position<'src> {
     /// The source text that this position refers to.
@@ -360,7 +348,7 @@ impl Display for Position<'_> {
     /// Display the current position in a human-readable format, including the
     /// name of the source text, and the position's line and column numbers.
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "\"{}\" at {}:{}", self.src.name, self.line_number(), self.col_number())
+        write!(f, "{} at {}:{}", self.src.name, self.line_number(), self.col_number())
     }
 }
 
@@ -378,6 +366,11 @@ enum SpanData<'src> {
         end: Position<'src>,
     }
 }
+
+// TODO: Consider developing a `MultiSpan` type that represents a union of
+// disjoint spans (possibly from different sources) with gaps in between. Or,
+// alternatively, rename this `Span` type to `SingleSpan` and develop a new
+// default span type that represents a union of individual spans.
 
 /// Represents a substring within the text of a `Source` object.
 /// 
@@ -516,51 +509,48 @@ impl<'src> Span<'src> {
     /// comments.
     /// 
     /// TODO: Include an option "ascii" that ensures output is ASCII.
-    /// 
-    /// TODO: Allow for rich-text output with text styling (bold) and colors.
     #[must_use]
     pub fn formatted_lines(&self) -> Vec<String> {
         let lines = self.lines();
         let last_line = lines.last().expect("at least one line");
-        let (last_row, last_text) = last_line;
-        let width = usize_str_width(*last_row);
+        let &(last_row, last_text) = last_line;
+        let width = usize_str_width(last_row);
+        
+        // Begin with the file name and start position
+        let mut strings = Vec::new();
+        strings.push(format!("{:>width$} ┏━❰ {} ❱", "", self.start));
+        strings.push(format!("{:>width$} ┃", ""));
         
         // Handle the special case of just one line
         if lines.len() == 1 {
-            let mut strings = Vec::new();
             let col = self.start.col_index;
             let num = std::cmp::max(self.end.col_index - self.start.col_index, 1);
-            strings.push(format!("{:>width$} ╻", ""));
             strings.push(format!("{:>width$} ┃ {}", last_row + 1, last_text));
-            strings.push(format!("{:>width$} ┃ {: >col$}{:^>num$}", "", "", ""));
+            strings.push(format!("{:>width$} ┃ {: >col$}{:▔>num$}", "", "", ""));
             strings.push(format!("{:>width$} ╹", ""));
             return strings;
         }
         
-        // Init and prefix
-        let mut strings = Vec::new();
-        strings.push(format!("{:>width$} ╻", ""));
-        
         // First line
-        if let Some((line_ind, text)) = lines.first() {
+        if let Some(&(line_ind, text)) = lines.first() {
             let col = self.start.col_index;
             let num = text.len() - self.start.col_index;
             strings.push(format!("{:>width$} ┃ {}", line_ind + 1, text));
-            strings.push(format!("{:>width$} ┃ {: >col$}{:^>num$}", "", "", ""));
+            strings.push(format!("{:>width$} ┃ {: >col$}{:▔>num$}", "", "", ""));
         }
         
         // Middle lines
-        for (line_ind, text) in &lines[1 .. lines.len() - 1] {
+        for &(line_ind, text) in &lines[1 .. lines.len() - 1] {
             let num = text.len();
             strings.push(format!("{:>width$} ┃ {}", line_ind + 1, text));
-            strings.push(format!("{:>width$} ┃ {:^>num$}", "", ""));
+            strings.push(format!("{:>width$} ┃ {:▔>num$}", "", ""));
         }
         
         // Last line
         {
             let num = self.end.col_index;
             strings.push(format!("{:>width$} ┃ {}", last_row + 1, last_text));
-            strings.push(format!("{:>width$} ┃ {:^>num$}", "", ""));
+            strings.push(format!("{:>width$} ┃ {:▔>num$}", "", ""));
         }
         
         // Suffix and return

@@ -2,7 +2,7 @@ use crate::source::Span;
 
 /// DOC
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-enum MessageLevel {
+pub enum MessageLevel {
     /// DOC
     Suggestion,
     
@@ -15,7 +15,7 @@ enum MessageLevel {
 
 /// DOC
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum Message<'src> {
+pub enum Message<'src> {
     //========//
     // Errors //
     //========//
@@ -67,7 +67,7 @@ enum Message<'src> {
     
     /// DOC
     UnnecessaryBraces {
-        group: Span<'src>,
+        expression: Span<'src>,
         kind: String,
     },
     
@@ -84,6 +84,10 @@ enum Message<'src> {
     },
     
     /// DOC
+    /// 
+    /// TODO: maybe this should be `IneffectiveCode`, since what's ineffective
+    /// cannot always be considered an expression (e.g., if it includes an
+    /// alternation operator)
     IneffectiveExpression {
         expression: Span<'src>,
     },
@@ -137,11 +141,6 @@ impl<'src> Message<'src> {
     }
     
     /// DOC
-    pub fn description(&self) -> String {
-        todo!()
-    }
-    
-    /// DOC
     pub fn lines(&self) -> Vec<String> {
         todo!()
     }
@@ -161,211 +160,223 @@ impl<'src> Message<'src> {
 //=== Errors ===//
 
 // Error:
-//     ⬥ unmatched opening brace
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ main {
-//       ┃      ^
-//       ╹
+//   ⬥ unmatched opening brace
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main {
+//     ┃      ▔
+//     ╹
 // Error:
-//     ⬥ unmatched closing brace
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ func{ - | + }
-//       ┃             ^
-//       ╹
+//   ⬥ unmatched closing brace
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ func{ - | + }
+//     ┃             ▔
+//     ╹
 // Error:
-//     ⬥ expected a function identifier; found a keyword
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ | {
-//       ┃ ^
-//       ╹
+//   ⬥ expected a function identifier
+//   ⬥ found a keyword
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ | {
+//     ┃ ▔
+//     ╹
 // Error:
-//     ⬥ expected a function identifier; found an atomic function
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ + {
-//       ┃ ^
-//       ╹
+//   ⬥ expected a function identifier
+//   ⬥ found an atomic function
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ + {
+//     ┃ ▔
+//     ╹
 // Error:
-//     ⬥ expected a function identifier; found a group
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ { - - +
-//       ┃ ^^^^^^^
-//     2 ┃     | - +
-//       ┃ ^^^^^^^^^
-//     3 ┃     | }
-//       ┃ ^^^^^^^
-//       ╹
+//   ⬥ expected a function identifier
+//   ⬥ found a bracketed expression
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ { - - +
+//     ┃ ▔▔▔▔▔▔▔
+//   2 ┃     | - +
+//     ┃ ▔▔▔▔▔▔▔▔▔
+//   3 ┃     | }
+//     ┃ ▔▔▔▔▔▔▔
+//     ╹
 // Error:
-//     ⬥ expected a bracketed definition "{ ... }" for the function "my_func"; found the token "("
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ my_func ( )
-//       ┃         ^
-//       ╹
+//   ⬥ expected a bracketed definition "{ ... }" for the function "my_func"
+//   ⬥ found the token "("
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ my_func ( )
+//     ┃         ▔
+//     ╹
 // Error:
-//     ⬥ expected a bracketed definition "{ ... }" for the function "my_func"; found the end of input
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ my_func
-//       ┃        ^
-//       ╹
+//   ⬥ expected a bracketed definition "{ ... }" for the function "my_func"
+//   ⬥ found the end of input
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ my_func
+//     ┃        ▔
+//     ╹
 // Error:
-//     ⬥ incompatible definitions of the function "do_something"
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ do_something { - }
-//       ┃ ^^^^^^^^^^^^^^^^^^
-//       ╹
-//     ⬥ "path/to/another/file.un" at 1:1
-//       ╻
-//     1 ┃ do_something { - + }
-//       ┃ ^^^^^^^^^^^^^^^^^^^^
-//       ╹
+//   ⬥ incompatible definitions of the function "do_something"
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ do_something { - }
+//     ┃ ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+//     ╹
+//     ┏━❰ path/to/another/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ do_something { - + }
+//     ┃ ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+//     ╹
 // Error:
-//     ⬥ reference to an undefined function "main"
-//     ⬥ did you mean "main"?
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ { mann ! }
-//       ┃   ^^^^
-//       ╹
+//   ⬥ reference to an undefined function "main"
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ { mann ! }
+//     ┃   ▔▔▔▔
+//     ╹
+//   ⬥ did you mean "main"?
 
 
 
 //=== Warnings ===//
 
 // Warning:
-//     ⬥ identifiers should not contain the keyword "|"
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ main { do|a|thing }
-//       ┃        ^^^^^^^^^^
-//       ╹
+//   ⬥ identifiers should not contain the keyword "|"
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main { do|a|thing }
+//     ┃        ▔▔▔▔▔▔▔▔▔▔
+//     ╹
 // Warning:
-//     ⬥ identifiers should not contain the keyword "{"
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ main { run{ }
-//       ┃        ^^^^
-//       ╹
+//   ⬥ identifiers should not contain the keyword "{"
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main { run{ }
+//     ┃        ▔▔▔▔
+//     ╹
 // Warning:
-//     ⬥ identifiers should not contain the keyword "}"
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ main { run} }
-//       ┃        ^^^^
-//       ╹
+//   ⬥ identifiers should not contain the keyword "}"
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main { run} }
+//     ┃        ▔▔▔▔
+//     ╹
 // Warning:
-//     ⬥ unnecessary braces around an empty expression
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ main { - { } + }
-//       ┃          ^^^
-//       ╹
+//   ⬥ unnecessary braces around an empty expression
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main { - { } + }
+//     ┃          ▔▔▔
+//     ╹
 // Warning:
-//     ⬥ unnecessary braces around a composition
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ main { - { - + } + }
-//       ┃          ^^^^^^^
-//       ╹
+//   ⬥ unnecessary braces around a composition
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main { - { - + } + }
+//     ┃          ▔▔▔▔▔▔▔
+//     ╹
 // Warning:
-//     ⬥ unnecessary braces around an alternation
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ main { { - - | - + } | + }
-//       ┃        ^^^^^^^^^^^^^
-//       ╹
+//   ⬥ unnecessary braces around an alternation
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main { { - - | - + } | + }
+//     ┃        ▔▔▔▔▔▔▔▔▔▔▔▔▔
+//     ╹
 // Warning:
-//     ⬥ unused function "func"
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ func { + + }
-//       ┃ ^^^^
-//       ╹
+//   ⬥ unused function "func"
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ func { + + }
+//     ┃ ▔▔▔▔
+//     ╹
 // Warning:
-//     ⬥ multiple equivalent definitions of the function "func"
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ func { + + }
-//       ┃ ^^^^^^^^^^^^
-//       ╹
-//     path/to/file.un at 2:1
-//       ╻
-//     2 ┃ func { + { + - + } }
-//       ┃ ^^^^^^^^^^^^^^^^^^^^
-//       ╹
+//   ⬥ multiple equivalent definitions of the function "func"
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ func { + + }
+//     ┃ ▔▔▔▔▔▔▔▔▔▔▔▔
+//     ╹
+//     ┏━❰ path/to/another/file.un at 1:1 ❱
+//     ┃
+//   2 ┃ func { + { + - + } }
+//     ┃ ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+//     ╹
 // Warning:
-//     ⬥ ineffective expression
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ main { + - }
-//       ┃        ^^^
-//       ╹
+//   ⬥ ineffective expression
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main { + - }
+//     ┃        ▔▔▔
+//     ╹
 // Warning:
-//     ⬥ ineffective expression
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ main { + *4 - - /2 - /2 }
-//       ┃        ^^^^^^^^^^^^^^^^
-//       ╹
+//   ⬥ ineffective expression
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main { + *4 - - /2 - /2 }
+//     ┃        ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+//     ╹
 // Warning:
-//     ⬥ ineffective expression
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ main { try-thing | - + | }
-//       ┃                    ^^^^^
-//       ╹
+//   ⬥ ineffective expression
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main { try-thing | - + | }
+//     ┃                    ▔▔▔▔▔
+//     ╹
 // Warning:
-//     ⬥ unreachable code following a never-failing expression
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ main { - + | | + + }
-//       ┃                ^^^
-//       ╹
+//   ⬥ ineffective expression
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main { fail-if-zero | fail-if-zero | ... }
+//     ┃                     ▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+//     ╹
 // Warning:
-//     ⬥ unreachable code following a never-failing expression
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ main { - + fail-if-zero | fail-if-nonzero | + + }
-//       ┃                                             ^^^
-//       ╹
+//   ⬥ unreachable code following a never-failing expression
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main { - + | | + + }
+//     ┃              ▔▔▔▔▔
+//     ╹
 // Warning:
-//     ⬥ unreachable code following an always-failing expression
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ main { 0 - - + | }
-//       ┃            ^^^
-//       ╹
+//   ⬥ unreachable code following a never-failing expression
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main { - + fail-if-zero | fail-if-nonzero | + + }
+//     ┃                                           ▔▔▔▔▔
+//     ╹
 // Warning:
-//     ⬥ unreachable code following an always-failing expression
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ main { fail-if-zero | fail-if-zero + + | }
-//       ┃                                    ^^^
-//       ╹
+//   ⬥ unreachable code following an always-failing expression
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main { 0 - - + | }
+//     ┃            ▔▔▔
+//     ╹
 // Warning:
-//     ⬥ unreachable code following a non-terminating expression
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ main { loop - + | }
-//       ┃             ^^^^^
-//       ╹
+//   ⬥ unreachable code following an always-failing expression
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main { fail-if-zero | fail-if-zero + + | }
+//     ┃                                    ▔▔▔
+//     ╹
 // Warning:
-//     ⬥ unreachable code following a non-terminating expression
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ main { - + loop-if-nonzero | loop-if-zero - + | }
-//       ┃                                           ^^^^^
-//       ╹
+//   ⬥ unreachable code following a non-terminating expression
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main { loop - + | }
+//     ┃             ▔▔▔▔▔
+//     ╹
 // Warning:
-//     ⬥ non-effectful non-terminating function "main" on input 0
-//     ⬥ "path/to/file.un" at 1:1
-//       ╻
-//     1 ┃ main { fail-if-nonzero main }
-//       ┃ ^^^^
-//       ╹
+//   ⬥ unreachable code following a non-terminating expression
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main { - + loop-if-nonzero | loop-if-zero - + | }
+//     ┃                                           ▔▔▔▔▔
+//     ╹
+// Warning:
+//   ⬥ non-effectful non-terminating function "main" on input 0
+//     ┏━❰ path/to/file.un at 1:1 ❱
+//     ┃
+//   1 ┃ main { fail-if-nonzero main }
+//     ┃ ▔▔▔▔
+//     ╹
