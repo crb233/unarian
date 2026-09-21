@@ -273,6 +273,24 @@ impl<'src> Library<'src> {
 
 
 
+// Idea: When an error occurs during syntax tree construction, report the error,
+// insert fake tokens as necessary to complete the syntax tree, and skip any
+// extraneous tokens until we are at a likely continuation point.
+// 
+// How should fake tokens be represented? Maybe as a regular token containing a
+// fake span? Maybe as a regular token with a static span from a static source?
+// 
+// Idea: A type of span that inserts new content into an existing span. This
+// could be useful for reporting suggested fixes to compilation errors.
+// `EditedSpan`
+// 
+// Idea: When continuing after an error, make it explicit what assumptions we
+// made in order to continue parsing, and emit messages.
+
+
+
+
+
 // struct Parser<'src> {
 //     // TODO
 // }

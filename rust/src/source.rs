@@ -457,6 +457,18 @@ impl<'src> Span<'src> {
         self.start <= other.start && self.end >= other.end
     }
     
+    /// DOC
+    #[must_use]
+    pub fn start(&self) -> &Position<'src> {
+        &self.start
+    }
+    
+    /// DOC
+    #[must_use]
+    pub fn end(&self) -> &Position<'src> {
+        &self.end
+    }
+    
     /// Returns the number of bytes contained in this span, when each character
     /// is represented in UTF-8 (the default for Rust strings).
     #[must_use]
@@ -577,6 +589,18 @@ impl Debug for Span<'_> {
 impl Display for Span<'_> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{} from {} to {}", self.src, self.start, self.end)
+    }
+}
+
+impl PartialOrd for Span<'_> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Span<'_> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.start.cmp(&other.start)
     }
 }
 

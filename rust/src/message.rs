@@ -1,24 +1,33 @@
-use crate::source::Span;
+use crate::source::{Position, Span};
 
 /// DOC
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum MessageLevel {
-    /// DOC
+    /// Represents a suggestion that may increase code clarity but is unlikely
+    /// to indicate a programming error.
     Suggestion,
     
-    /// DOC
+    /// Represents a warning that doesn't prevent compilation but may indicate a
+    /// programming error.
     Warning,
     
-    /// DOC
-    Error,
+    /// Represents a semantic (behavioral) error that prevents the program from
+    /// being compiled.
+    SemanticError,
+    
+    /// Represents a syntactic (parsing) error that is either unrecoverable or
+    /// requires unsubstantiated assumptions about programmer intent to recover
+    /// from. Messages from the remainder of the program after such an error may
+    /// not reliably provide accurate information to the programmer.
+    SyntacticError,
 }
 
 /// DOC
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Message<'src> {
-    //========//
-    // Errors //
-    //========//
+    //==================//
+    // Syntactic Errors //
+    //==================//
     
     /// DOC
     UnmatchedOpeningBrace {
@@ -43,10 +52,14 @@ pub enum Message<'src> {
         kind: String,
     },
     
+    //=================//
+    // Semantic Errors //
+    //=================//
+    
     /// DOC
     IncompatibleDefinitions {
         function: String,
-        definitions: Vec<Span<'src>>,
+        declarations: Vec<Span<'src>>,
     },
     
     /// DOC
@@ -59,46 +72,46 @@ pub enum Message<'src> {
     // Warnings //
     //==========//
     
-    /// DOC
+    /// A warning that an identifier contains a keyword.
     IdentifierContainsKeyword {
-        idenfifier: Span<'src>,
+        identifier: Span<'src>,
         keywords: Vec<String>,
     },
     
-    /// DOC
+    /// A warning that a matching pair of braces are unnecessary and can be
+    /// safely removed.
     UnnecessaryBraces {
         expression: Span<'src>,
         kind: String,
     },
     
-    /// DOC
+    /// A warning that a declared function is not referenced anywhere else.
     UnusedFunction {
         name: String,
         declaration: Span<'src>,
     },
     
-    /// DOC
+    /// A warning that there are several equivalent definitions for the same
+    /// function.
     EquivalentDefinitions {
         name: String,
         declarations: Vec<Span<'src>>,
     },
     
-    /// DOC
-    /// 
-    /// TODO: maybe this should be `IneffectiveCode`, since what's ineffective
-    /// cannot always be considered an expression (e.g., if it includes an
-    /// alternation operator)
-    IneffectiveExpression {
-        expression: Span<'src>,
+    /// A warning that a piece of code that may be reachable but is guaranteed
+    /// to have no semantic effects.
+    IneffectiveCode {
+        code: Span<'src>,
     },
     
-    /// DOC
+    /// A warning that a piece of code is guaranteed to be unreachable.
     UnreachableCode {
         code: Span<'src>,
         reason: String,
     },
     
-    /// DOC
+    /// A warning that a function is guaranteed not to terminate and,
+    /// additionally, has no visible effects in the form of I/O.
     NonTerminatingFunction {
         declaration: Span<'src>,
     },
@@ -107,7 +120,8 @@ pub enum Message<'src> {
     // Suggestions //
     //=============//
     
-    /// DOC
+    /// A suggestion that a declared function should be given a different name
+    /// to correctly and accurately reflect its behavior.
     RecommendedFunctionName {
         name: String,
         new_name: String,
@@ -124,20 +138,42 @@ impl<'src> Message<'src> {
                 | Self::UnmatchedClosingBrace { .. }
                 | Self::ExpectedCompoundFunctionIdentifier { .. }
                 | Self::ExpectedCompoundFunctionDefinition { .. }
-                | Self::IncompatibleDefinitions { .. }
+                => MessageLevel::SyntacticError,
+            Self::IncompatibleDefinitions { .. }
                 | Self::UndefinedFunctionReference { .. }
-                => MessageLevel::Error,
+                => MessageLevel::SemanticError,
             Self::IdentifierContainsKeyword { .. }
                 | Self::UnnecessaryBraces { .. }
                 | Self::UnusedFunction { .. }
                 | Self::EquivalentDefinitions { .. }
-                | Self::IneffectiveExpression { .. }
+                | Self::IneffectiveCode { .. }
                 | Self::UnreachableCode { .. }
                 | Self::NonTerminatingFunction { .. }
                 => MessageLevel::Warning,
             Self::RecommendedFunctionName { .. }
                 => MessageLevel::Suggestion,
         }
+    }
+    
+    /// DOC
+    pub fn position(&self) -> Position<'src> {
+        let span = match self {
+            Self::UnmatchedOpeningBrace { open, .. } => open,
+            Self::UnmatchedClosingBrace { close, .. } => close,
+            Self::ExpectedCompoundFunctionIdentifier { found, .. } => found,
+            Self::ExpectedCompoundFunctionDefinition { found, .. } => found,
+            Self::IncompatibleDefinitions { declarations, .. } => declarations.iter().min().expect("must be at least one definition"),
+            Self::UndefinedFunctionReference { reference, .. } => reference,
+            Self::IdentifierContainsKeyword { identifier, .. } => identifier,
+            Self::UnnecessaryBraces { expression, .. } => expression,
+            Self::UnusedFunction { declaration, .. } => declaration,
+            Self::EquivalentDefinitions { declarations, .. } => declarations.iter().min().expect("must be at least one declaration"),
+            Self::IneffectiveCode { code, .. } => code,
+            Self::UnreachableCode { code, .. } => code,
+            Self::NonTerminatingFunction { declaration, .. } => declaration,
+            Self::RecommendedFunctionName { declaration, .. } => declaration,
+        };
+        span.start().clone()
     }
     
     /// DOC
